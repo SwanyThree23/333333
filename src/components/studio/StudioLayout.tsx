@@ -15,6 +15,7 @@ import {
     MessageSquare,
     UserPlus,
     Layers,
+    LayoutGrid,
     Sparkles,
     ChevronLeft,
     ChevronRight
@@ -44,7 +45,7 @@ export function StudioHeader({ className }: HeaderProps) {
                 </button>
 
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-cyan to-accent-purple flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-burgundy to-accent-gold flex items-center justify-center">
                         <MonitorPlay size={20} />
                     </div>
                     <div>
@@ -92,7 +93,11 @@ export function StudioHeader({ className }: HeaderProps) {
 
                 <div className="w-px h-8 bg-white/10 mx-2" />
 
-                <button className="p-2.5 rounded-xl hover:bg-white/10 transition-colors">
+                <button
+                    className="p-2.5 rounded-xl hover:bg-white/10 transition-colors"
+                    title="Studio Settings"
+                    aria-label="Studio Settings"
+                >
                     <Settings size={20} className="text-gray-400" />
                 </button>
             </div>
@@ -111,7 +116,7 @@ function QuickControlButton({
         <button className={cn(
             'p-2.5 rounded-xl transition-all duration-200',
             active
-                ? 'bg-accent-cyan/20 text-accent-cyan'
+                ? 'bg-accent-gold/20 text-accent-gold'
                 : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
         )}>
             {icon}
@@ -123,6 +128,10 @@ interface SidebarProps {
     className?: string;
 }
 
+import { SceneSwitcher, SceneLayoutEditor } from './SceneLayoutEditor';
+import { ChatPanel as AdvancedChatPanel } from './ChatPanel';
+import { GuestManager } from './GuestManager';
+
 export function StudioSidebar({ className }: SidebarProps) {
     const {
         sidebarOpen,
@@ -131,18 +140,21 @@ export function StudioSidebar({ className }: SidebarProps) {
         scenes,
         activeScene,
         chatMessages,
-        guests
+        guests,
+        stream
     } = useStudioStore();
 
     if (!sidebarOpen) return null;
 
     const panels = [
         { id: 'scenes' as const, icon: <Layers size={20} />, label: 'Scenes', count: scenes.length },
-        { id: 'sources' as const, icon: <MonitorPlay size={20} />, label: 'Sources', count: activeScene?.sources.length || 0 },
+        { id: 'layout' as const, icon: <LayoutGrid size={20} />, label: 'Layout', count: activeScene?.sources.length || 0 },
         { id: 'chat' as const, icon: <MessageSquare size={20} />, label: 'Chat', count: chatMessages.length },
         { id: 'guests' as const, icon: <Users size={20} />, label: 'Guests', count: guests.length },
         { id: 'settings' as const, icon: <Settings size={20} />, label: 'Settings' },
     ];
+
+    const streamId = stream?.id || '';
 
     return (
         <motion.aside
@@ -159,25 +171,26 @@ export function StudioSidebar({ className }: SidebarProps) {
                 {panels.map((panel) => (
                     <button
                         key={panel.id}
-                        onClick={() => setActivePanel(panel.id)}
+                        onClick={() => setActivePanel(panel.id as any)}
                         className={cn(
                             'flex-1 py-3 px-2 flex flex-col items-center gap-1 transition-all duration-200 relative',
                             activePanel === panel.id
-                                ? 'text-accent-cyan'
+                                ? 'text-accent-gold'
                                 : 'text-gray-400 hover:text-white'
                         )}
+                        title={panel.label}
                     >
                         {panel.icon}
                         <span className="text-[10px] font-medium">{panel.label}</span>
                         {panel.count !== undefined && panel.count > 0 && (
-                            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-accent-purple text-[10px] flex items-center justify-center">
+                            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-accent-burgundy text-[10px] flex items-center justify-center text-white">
                                 {panel.count > 99 ? '99+' : panel.count}
                             </span>
                         )}
                         {activePanel === panel.id && (
                             <motion.div
                                 layoutId="activeTab"
-                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-cyan"
+                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-gold"
                             />
                         )}
                     </button>
@@ -185,11 +198,11 @@ export function StudioSidebar({ className }: SidebarProps) {
             </div>
 
             {/* Panel Content */}
-            <div className="flex-1 overflow-y-auto p-4">
-                {activePanel === 'scenes' && <ScenesPanel />}
-                {activePanel === 'sources' && <SourcesPanel />}
-                {activePanel === 'chat' && <ChatPanel />}
-                {activePanel === 'guests' && <GuestsPanel />}
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                {activePanel === 'scenes' && <SceneSwitcher />}
+                {activePanel === 'layout' && <SceneLayoutEditor />}
+                {activePanel === 'chat' && <AdvancedChatPanel streamId={streamId} />}
+                {activePanel === 'guests' && <GuestManager streamId={streamId} />}
                 {activePanel === 'settings' && <SettingsPanel />}
             </div>
         </motion.aside>
@@ -212,7 +225,7 @@ function ScenesPanel() {
                         transitionType: 'fade',
                         transitionDuration: 300,
                     })}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-accent-cyan/20 text-accent-cyan hover:bg-accent-cyan/30 transition-colors"
+                    className="text-xs px-3 py-1.5 rounded-lg bg-accent-gold/20 text-accent-gold hover:bg-accent-gold/30 transition-colors"
                 >
                     + Add
                 </button>
@@ -228,7 +241,7 @@ function ScenesPanel() {
                         className={cn(
                             'w-full p-3 rounded-xl transition-all duration-200 text-left',
                             activeScene?.id === scene.id
-                                ? 'bg-accent-cyan/20 border border-accent-cyan/50'
+                                ? 'bg-accent-gold/20 border border-accent-gold/50'
                                 : 'bg-white/5 border border-transparent hover:bg-white/10'
                         )}
                     >
@@ -272,7 +285,7 @@ function SourcesPanel() {
                         key={source.type}
                         className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-200 flex flex-col items-center gap-2"
                     >
-                        <div className="w-10 h-10 rounded-xl bg-accent-purple/20 flex items-center justify-center text-accent-purple">
+                        <div className="w-10 h-10 rounded-xl bg-accent-burgundy/20 flex items-center justify-center text-accent-gold">
                             {source.icon}
                         </div>
                         <span className="text-xs">{source.label}</span>
@@ -290,7 +303,7 @@ function SourcesPanel() {
                                 key={source.id}
                                 className="p-3 rounded-xl bg-white/5 flex items-center gap-3"
                             >
-                                <div className="w-8 h-8 rounded-lg bg-accent-cyan/20 flex items-center justify-center">
+                                <div className="w-8 h-8 rounded-lg bg-accent-gold/20 flex items-center justify-center">
                                     <Layers size={14} />
                                 </div>
                                 <div className="flex-1">
@@ -330,10 +343,10 @@ function ChatPanel() {
                 {chatMessages.map((msg) => (
                     <div key={msg.id} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-accent-purple/30 text-accent-purple">
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-accent-burgundy/30 text-accent-gold">
                                 {msg.platform}
                             </span>
-                            <span className="text-sm font-medium text-accent-cyan">{msg.username}</span>
+                            <span className="text-sm font-medium text-accent-gold">{msg.username}</span>
                         </div>
                         <p className="text-sm text-gray-300">{msg.message}</p>
                     </div>
@@ -358,7 +371,7 @@ function GuestsPanel() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Guests</h3>
-                <button className="text-xs px-3 py-1.5 rounded-lg bg-accent-cyan/20 text-accent-cyan hover:bg-accent-cyan/30 transition-colors">
+                <button className="text-xs px-3 py-1.5 rounded-lg bg-accent-gold/20 text-accent-gold hover:bg-accent-gold/30 transition-colors">
                     + Invite
                 </button>
             </div>
@@ -366,7 +379,7 @@ function GuestsPanel() {
             <div className="space-y-2">
                 {guests.map((guest) => (
                     <div key={guest.id} className="p-3 rounded-xl bg-white/5 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-cyan to-accent-purple flex items-center justify-center text-sm font-bold">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-burgundy to-accent-gold flex items-center justify-center text-sm font-bold">
                             {guest.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1">
@@ -426,7 +439,7 @@ function SettingsPanel() {
 
                 <div>
                     <label className="block text-sm text-gray-400 mb-1.5">Quality</label>
-                    <select className="input-field">
+                    <select className="input-field" title="Stream Quality">
                         <option>1080p 60fps</option>
                         <option>1080p 30fps</option>
                         <option>720p 60fps</option>

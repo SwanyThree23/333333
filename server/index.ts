@@ -63,6 +63,23 @@ app.post('/api/streams', async (req, res) => {
             settings: { quality: quality || '1080p30' },
         });
 
+        // Seed default scenes for the new stream
+        const defaultScenes = [
+            { name: 'Main Scene', layout: 'single', order: 0 },
+            { name: 'Interview', layout: 'side-by-side', order: 1 },
+            { name: 'Screen Share', layout: 'pip', order: 2 },
+            { name: 'BRB Screen', layout: 'single', order: 3 },
+        ];
+
+        for (const scene of defaultScenes) {
+            await db.createScene({
+                streamId: dbStream.id,
+                ...scene,
+                sources: [],
+                isActive: scene.order === 0
+            });
+        }
+
         // Create stream in service
         const streamConfig = streamService.createStream({
             title,
@@ -97,6 +114,15 @@ app.get('/api/streams/:id', async (req, res) => {
         return res.status(404).json({ error: 'Stream not found' });
     }
     res.json(stream);
+});
+
+app.get('/api/streams/user/:userId', async (req, res) => {
+    try {
+        const streams = await db.getStreamsByUserId(req.params.userId);
+        res.json(streams);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch user streams' });
+    }
 });
 
 app.post('/api/streams/:id/start', async (req, res) => {
@@ -161,6 +187,16 @@ app.post('/api/avatar/session', async (req, res) => {
         res.json({ success: true, session });
     } catch (error) {
         res.status(500).json({ error: 'Failed to create avatar session' });
+    }
+});
+
+app.post('/api/avatar/session/start', async (req, res) => {
+    try {
+        const { sessionId, sdpAnswer } = req.body;
+        await heygen.startStreamingSession(sessionId, sdpAnswer);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to start avatar session' });
     }
 });
 
@@ -433,6 +469,32 @@ io.on('connection', (socket) => {
                 await db.updateAvatarStatus(session.id, 'idle');
                 io.to(`stream:${streamId}`).emit('avatar:finished', { avatarId });
             }, duration);
+        }
+    });
+
+    // --- Guest WebRTC Signaling ---
+    // Guest joins signaling (sending offer to broadcaster)
+    socket.on('guest:signal:offer', (data) => {
+        const { streamId, offer, guestId } = data;
+        // Forward offer to the broadcaster (who is in the stream room)
+        io.to(`stream:${streamId}`).emit('guest:signal:offer', { offer, guestId, socketId: socket.id });
+    });
+
+    // Broadcaster sends answer to guest
+    socket.on('guest:signal:answer', (data) => {
+        const { targetSocketId, answer, guestId } = data;
+        io.to(targetSocketId).emit('guest:signal:answer', { answer, guestId });
+    });
+
+    // ICE Candidate exchange
+    socket.on('guest:signal:ice', (data) => {
+        const { streamId, candidate, guestId, targetSocketId } = data;
+        if (targetSocketId) {
+            // Forward to specific client
+            io.to(targetSocketId).emit('guest:signal:ice', { candidate, guestId });
+        } else {
+            // Forward to broadcaster
+            io.to(`stream:${streamId}`).emit('guest:signal:ice', { candidate, guestId, socketId: socket.id });
         }
     });
 

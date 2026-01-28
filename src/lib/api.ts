@@ -69,6 +69,8 @@ export const streamApi = {
 
     get: (id: string) => apiCall<Stream>(`/streams/${id}`),
 
+    getByUser: (userId: string) => apiCall<Stream[]>(`/streams/user/${userId}`),
+
     start: (id: string) =>
         apiCall<{ success: boolean; errors: string[] }>(`/streams/${id}/start`, {
             method: 'POST',
@@ -117,6 +119,12 @@ export const avatarApi = {
         apiCall<{ success: boolean; session: AvatarSession }>('/avatar/session', {
             method: 'POST',
             body: JSON.stringify({ avatarId, streamId }),
+        }),
+
+    startSession: (sessionId: string, sdpAnswer: string) =>
+        apiCall<{ success: boolean }>('/avatar/session/start', {
+            method: 'POST',
+            body: JSON.stringify({ sessionId, sdpAnswer }),
         }),
 
     speak: (params: {

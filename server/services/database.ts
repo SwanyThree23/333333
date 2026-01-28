@@ -1,12 +1,15 @@
-/**
- * Database Service backed by Prisma & Neon
- */
-
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import { v4 as uuidv4 } from 'uuid';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { PrismaNeon } from '@prisma/adapter-neon';
+import ws from 'ws';
 
-// Re-exporting prisma client for the server
-const prisma = new PrismaClient();
+neonConfig.webSocketConstructor = ws;
+const connectionString = process.env.DATABASE_URL!;
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaNeon(pool as any);
+const prisma = new PrismaClient({ adapter });
 
 export class Database {
     // User operations

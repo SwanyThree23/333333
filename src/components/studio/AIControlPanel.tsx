@@ -17,6 +17,7 @@ import {
     Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useStudioStore } from '@/lib/store';
 import { avatarApi, aiApi, Avatar, Voice } from '@/lib/api';
 
 interface AIControlPanelProps {
@@ -51,6 +52,8 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
     const [chatResponse, setChatResponse] = useState('');
 
     // Load avatars and voices
+    const avatarSessionId = useStudioStore((state) => state.avatarSessionId);
+
     useEffect(() => {
         loadAvatars();
         loadVoices();
@@ -80,7 +83,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
 
         try {
             const { data } = await avatarApi.speak({
-                sessionId: 'demo-session',
+                sessionId: avatarSessionId || 'demo-session',
                 streamId: streamId || 'demo-stream',
                 text,
                 voiceId: selectedVoice?.voice_id,
@@ -153,8 +156,8 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
             {/* Header */}
             <div className="p-4 border-b border-white/10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-cyan/30 to-accent-purple/30 flex items-center justify-center">
-                        <Brain size={20} className="text-accent-cyan" />
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-burgundy/30 to-accent-gold/30 flex items-center justify-center">
+                        <Brain size={20} className="text-accent-gold" />
                     </div>
                     <div>
                         <h3 className="font-semibold">AI Control Center</h3>
@@ -229,7 +232,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                                                 >
                                                     <span>{avatar.avatar_name}</span>
                                                     {selectedAvatar?.avatar_id === avatar.avatar_id && (
-                                                        <Check size={14} className="text-accent-cyan" />
+                                                        <Check size={14} className="text-accent-gold" />
                                                     )}
                                                 </button>
                                             ))}
@@ -278,7 +281,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                                                         </span>
                                                     </div>
                                                     {selectedVoice?.voice_id === voice.voice_id && (
-                                                        <Check size={14} className="text-accent-cyan" />
+                                                        <Check size={14} className="text-accent-gold" />
                                                     )}
                                                 </button>
                                             ))}
@@ -297,7 +300,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                                     className={cn(
                                         'px-3 py-1 text-xs rounded-md transition-colors',
                                         voiceProvider === 'elevenlabs'
-                                            ? 'bg-accent-purple text-white'
+                                            ? 'bg-accent-burgundy text-white'
                                             : 'text-gray-400 hover:text-white'
                                     )}
                                 >
@@ -308,7 +311,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                                     className={cn(
                                         'px-3 py-1 text-xs rounded-md transition-colors',
                                         voiceProvider === 'heygen'
-                                            ? 'bg-accent-cyan text-white'
+                                            ? 'bg-accent-gold text-white'
                                             : 'text-gray-400 hover:text-white'
                                     )}
                                 >
@@ -338,7 +341,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                             className={cn(
                                 'w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2',
                                 text.trim() && selectedAvatar && !isSpeaking
-                                    ? 'bg-gradient-to-r from-accent-cyan to-accent-purple text-white hover:shadow-neon-cyan'
+                                    ? 'bg-gradient-to-r from-accent-burgundy to-accent-gold text-white hover:shadow-neon-gold'
                                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                             )}
                         >
@@ -377,6 +380,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                                 value={scriptStyle}
                                 onChange={(e) => setScriptStyle(e.target.value)}
                                 className="input-field"
+                                title="Script Style"
                             >
                                 <option value="professional">Professional</option>
                                 <option value="casual">Casual & Friendly</option>
@@ -392,7 +396,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                             className={cn(
                                 'w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2',
                                 scriptTopic.trim() && !isProcessing
-                                    ? 'bg-accent-purple text-white hover:bg-accent-purple/80'
+                                    ? 'bg-accent-burgundy text-white hover:bg-accent-burgundy/80'
                                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                             )}
                         >
@@ -450,7 +454,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                             className={cn(
                                 'w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2',
                                 chatQuestion.trim() && !isProcessing
-                                    ? 'bg-accent-pink text-white hover:bg-accent-pink/80'
+                                    ? 'bg-accent-gold text-white hover:bg-accent-gold/80'
                                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                             )}
                         >

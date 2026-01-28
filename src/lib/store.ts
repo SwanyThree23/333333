@@ -15,6 +15,7 @@ interface StudioState {
     // Avatar State
     avatars: AIAvatar[];
     activeAvatar: AIAvatar | null;
+    avatarSessionId: string | null;
 
     // Chat State
     chatMessages: ChatMessage[];
@@ -28,7 +29,7 @@ interface StudioState {
 
     // UI State
     sidebarOpen: boolean;
-    activePanel: 'scenes' | 'sources' | 'chat' | 'guests' | 'settings';
+    activePanel: 'scenes' | 'layout' | 'sources' | 'chat' | 'guests' | 'settings';
 
     // Actions
     setStream: (stream: Stream | null) => void;
@@ -44,6 +45,7 @@ interface StudioState {
 
     setAvatars: (avatars: AIAvatar[]) => void;
     setActiveAvatar: (avatar: AIAvatar | null) => void;
+    setAvatarSessionId: (id: string | null) => void;
     speakWithAvatar: (text: string) => void;
 
     addChatMessage: (message: ChatMessage) => void;
@@ -72,6 +74,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
     avatars: [],
     activeAvatar: null,
+    avatarSessionId: null,
 
     chatMessages: [],
     chatPaused: false,
@@ -125,6 +128,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     // Avatar Actions
     setAvatars: (avatars) => set({ avatars }),
     setActiveAvatar: (avatar) => set({ activeAvatar: avatar }),
+    setAvatarSessionId: (id) => set({ avatarSessionId: id }),
 
     speakWithAvatar: (text) => {
         const avatar = get().activeAvatar;

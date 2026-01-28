@@ -18,13 +18,14 @@ import {
 } from 'lucide-react';
 import { cn, formatDuration } from '@/lib/utils';
 import { useStudioStore } from '@/lib/store';
+import { WebRTCAvatar } from './WebRTCAvatar';
 
 interface PreviewCanvasProps {
     className?: string;
 }
 
 export function PreviewCanvas({ className }: PreviewCanvasProps) {
-    const { activeScene, isStreaming, streamDuration, updateStreamDuration } = useStudioStore();
+    const { activeScene, isStreaming, streamDuration, updateStreamDuration, activeAvatar, stream } = useStudioStore();
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
 
@@ -49,15 +50,23 @@ export function PreviewCanvas({ className }: PreviewCanvasProps) {
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="w-full h-full bg-gradient-to-br from-surface-300 via-surface-400 to-surface-500 flex items-center justify-center"
+                            className="w-full h-full bg-surface-500 flex items-center justify-center overflow-hidden"
                         >
-                            <div className="text-center">
-                                <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-gradient-to-br from-accent-cyan/30 to-accent-purple/30 flex items-center justify-center backdrop-blur-xl">
-                                    <Sparkles size={48} className="text-accent-cyan" />
+                            {activeAvatar ? (
+                                <WebRTCAvatar
+                                    avatarId={activeAvatar.id}
+                                    streamId={stream?.id || 'demo-stream'}
+                                    className="w-full h-full"
+                                />
+                            ) : (
+                                <div className="text-center">
+                                    <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-gradient-to-br from-accent-burgundy/30 to-accent-gold/30 flex items-center justify-center backdrop-blur-xl">
+                                        <Sparkles size={48} className="text-accent-gold" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold mb-1">{activeScene.name}</h3>
+                                    <p className="text-gray-400 text-sm">{activeScene.sources.length} sources configured</p>
                                 </div>
-                                <h3 className="text-xl font-semibold mb-1">{activeScene.name}</h3>
-                                <p className="text-gray-400 text-sm">{activeScene.sources.length} sources configured</p>
-                            </div>
+                            )}
                         </motion.div>
                     ) : (
                         <div className="text-center text-gray-500">
@@ -103,10 +112,16 @@ export function PreviewCanvas({ className }: PreviewCanvasProps) {
                             <button
                                 onClick={() => setIsFullscreen(!isFullscreen)}
                                 className="p-2 rounded-lg bg-black/40 hover:bg-black/60 transition-colors"
+                                title="Toggle Fullscreen"
+                                aria-label="Toggle Fullscreen"
                             >
                                 <Maximize2 size={18} />
                             </button>
-                            <button className="p-2 rounded-lg bg-black/40 hover:bg-black/60 transition-colors">
+                            <button
+                                className="p-2 rounded-lg bg-black/40 hover:bg-black/60 transition-colors"
+                                title="Settings"
+                                aria-label="Settings"
+                            >
                                 <Settings size={18} />
                             </button>
                         </div>
@@ -149,7 +164,7 @@ export function StreamControls({ className }: StreamControlsProps) {
                     'relative px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center gap-3',
                     isStreaming
                         ? 'bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30'
-                        : 'bg-gradient-to-r from-accent-cyan to-accent-purple text-white shadow-neon-cyan hover:shadow-neon-purple',
+                        : 'bg-gradient-to-r from-accent-burgundy to-accent-gold text-white shadow-neon-burgundy hover:shadow-neon-gold',
                     isStarting && 'opacity-70 cursor-wait'
                 )}
             >
@@ -241,8 +256,8 @@ export function AvatarControls({ className }: AvatarControlsProps) {
     return (
         <div className={cn('glass rounded-2xl p-4', className)}>
             <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-cyan/30 to-accent-purple/30 flex items-center justify-center">
-                    <Sparkles size={24} className="text-accent-cyan" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-burgundy/30 to-accent-gold/30 flex items-center justify-center">
+                    <Sparkles size={24} className="text-accent-gold" />
                 </div>
                 <div>
                     <h3 className="font-semibold">AI Avatar</h3>
@@ -279,7 +294,7 @@ export function AvatarControls({ className }: AvatarControlsProps) {
                     className={cn(
                         'px-4 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2',
                         text.trim() && activeAvatar && !isSpeaking
-                            ? 'bg-accent-cyan text-white hover:bg-accent-cyan/80'
+                            ? 'bg-accent-gold text-white hover:bg-accent-gold/80'
                             : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                     )}
                 >

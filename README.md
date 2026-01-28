@@ -156,27 +156,42 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ### Analytics
 - `GET /api/analytics/:streamId` - Get stream analytics
 
-## 🛠️ Tech Stack
+## 🛠️ Tech Stack & Production Setup
 
 | Category | Technology |
 |----------|------------|
-| Frontend | Next.js 14, React 18, TypeScript |
-| Styling | Tailwind CSS, Framer Motion |
-| State | Zustand |
-| Real-time | Socket.io |
-| Backend | Express, Node.js |
-| AI Avatar | HeyGen |
-| TTS | ElevenLabs |
-| AI | OpenAI GPT-4 |
+| **Frontend** | `Next.js 14`, `React 18`, `TypeScript` |
+| **Styling** | `Tailwind CSS`, `Framer Motion`, `Lucide React` |
+| **State** | `Zustand` (Global), `React Context` |
+| **Real-time** | `Socket.io`, `WebRTC` (HeyGen & Guest Link) |
+| **Backend** | `Express`, `Node.js` |
+| **Database** | `Prisma ORM`, `Neon PostgreSQL` (Serverless) |
+| **AI Avatar** | `HeyGen` (Streaming API) |
+| **Neural TTS** | `ElevenLabs` (V2 API) |
+| **AI Brain** | `OpenAI GPT-4 Turbo` |
+
+## 🚀 Production Deployment
+
+1. **Database Migration**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
+2. **Environment Configuration**
+   Ensure `DATABASE_URL`, `HEYGEN_API_KEY`, `ELEVENLABS_API_KEY`, and `OPENAI_API_KEY` are configured.
+
+3. **Build & Optimize**
+   ```bash
+   npm run build
+   npm run start
+   ```
 
 ## 🎨 Design System
-
-The platform uses a premium dark theme with:
-- **Neon Cyan** (`#00f5ff`) - Primary accent
-- **Purple** (`#a855f7`) - Secondary accent
-- **Pink** (`#ec4899`) - Highlight accent
-- **Glassmorphism** - Frosted glass effects
-- **Smooth Animations** - Micro-interactions
+The platform utilizes a **High-Fidelity Cyber-Studio** aesthetic:
+- **Neon Glassmorphism**: Frosted layers with vibrant `#00f5ff` and `#a855f7` glows.
+- **Dynamic Micro-Animations**: Powered by `Framer Motion` for layout shifts.
+- **Responsive Studio**: Custom multi-panel layout optimized for dual-monitor setups.
 
 ## 📝 Development Notes
 

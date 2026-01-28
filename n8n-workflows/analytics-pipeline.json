@@ -1,0 +1,26 @@
+{
+    "name": "Analytics Pipeline",
+    "nodes": [
+        {
+            "name": "Cron 5m",
+            "type": "n8n-nodes-base.cron"
+        },
+        {
+            "name": "Fetch Platform Stats",
+            "type": "n8n-nodes-base.httpRequest"
+        },
+        {
+            "name": "Calculate Metrics",
+            "type": "n8n-nodes-base.function"
+        },
+        {
+            "name": "DB Update",
+            "type": "n8n-nodes-base.postgres"
+        },
+        {
+            "name": "WebSocket Broadcast",
+            "type": "n8n-nodes-base.httpRequest"
+        }
+    ],
+    "connections": {}
+}

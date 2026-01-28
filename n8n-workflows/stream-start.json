@@ -1,0 +1,34 @@
+{
+    "name": "Stream Start Workflow",
+    "nodes": [
+        {
+            "name": "Webhook Trigger",
+            "type": "n8n-nodes-base.webhook"
+        },
+        {
+            "name": "Twitch - Go Live",
+            "type": "n8n-nodes-base.httpRequest"
+        },
+        {
+            "name": "YouTube - Update Livestream",
+            "type": "n8n-nodes-base.httpRequest"
+        },
+        {
+            "name": "Facebook - Start Broadcast",
+            "type": "n8n-nodes-base.httpRequest"
+        },
+        {
+            "name": "Discord - Notify",
+            "type": "n8n-nodes-base.httpRequest"
+        },
+        {
+            "name": "DB Update",
+            "type": "n8n-nodes-base.postgres"
+        },
+        {
+            "name": "Avatar Greeting",
+            "type": "n8n-nodes-base.httpRequest"
+        }
+    ],
+    "connections": {}
+}

@@ -1,0 +1,26 @@
+{
+    "name": "AI Avatar Automation",
+    "nodes": [
+        {
+            "name": "Game Event Webhook",
+            "type": "n8n-nodes-base.webhook"
+        },
+        {
+            "name": "Analyze Event",
+            "type": "n8n-nodes-base.function"
+        },
+        {
+            "name": "Call Avatar Controller",
+            "type": "n8n-nodes-base.httpRequest"
+        },
+        {
+            "name": "Broadcast",
+            "type": "n8n-nodes-base.httpRequest"
+        },
+        {
+            "name": "DB Log",
+            "type": "n8n-nodes-base.postgres"
+        }
+    ],
+    "connections": {}
+}

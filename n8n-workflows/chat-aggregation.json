@@ -1,0 +1,26 @@
+{
+    "name": "Chat Aggregation",
+    "nodes": [
+        {
+            "name": "Triggers",
+            "type": "n8n-nodes-base.webhook"
+        },
+        {
+            "name": "Normalize Message",
+            "type": "n8n-nodes-base.function"
+        },
+        {
+            "name": "Toxicity Filter",
+            "type": "n8n-nodes-base.httpRequest"
+        },
+        {
+            "name": "DB Insert",
+            "type": "n8n-nodes-base.postgres"
+        },
+        {
+            "name": "WebSocket Broadcast",
+            "type": "n8n-nodes-base.httpRequest"
+        }
+    ],
+    "connections": {}
+}

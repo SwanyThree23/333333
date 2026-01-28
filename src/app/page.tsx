@@ -173,7 +173,7 @@ export default function HomePage() {
 
                     {/* AI Avatar Showcase */}
                     <div className="grid lg:grid-cols-2 gap-12 items-center glass p-8 lg:p-12 rounded-[40px] border border-white/10 overflow-hidden relative">
-                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent-cyan/10 blur-[120px] -z-10" />
+                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent-burgundy/10 blur-[120px] -z-10" />
 
                         <motion.div
                             initial={{ opacity: 0, x: -30 }}
@@ -336,19 +336,19 @@ const features = [
         title: 'Live Analytics',
         description: 'Real-time viewer counts, engagement metrics, and platform breakdown at your fingertips.',
         icon: <BarChart3 size={24} />,
-        color: 'bg-accent-orange/20 text-accent-orange',
+        color: 'bg-accent-gold/20 text-accent-gold',
     },
     {
         title: 'Scene Management',
         description: 'Create and switch between scenes with smooth transitions. Add overlays, images, and videos.',
         icon: <Monitor size={24} />,
-        color: 'bg-green-500/20 text-green-400',
+        color: 'bg-accent-earth/20 text-accent-gold',
     },
     {
         title: 'Chat Integration',
         description: 'Unified chat from all platforms with AI moderation and real-time interaction capabilities.',
         icon: <MessageSquare size={24} />,
-        color: 'bg-blue-500/20 text-blue-400',
+        color: 'bg-accent-burgundy/20 text-accent-gold',
     },
 ];
 

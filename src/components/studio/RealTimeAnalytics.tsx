@@ -18,7 +18,9 @@ import {
     RefreshCw,
     DollarSign,
     UserPlus,
-    Eye
+    Eye,
+    Sparkles,
+    Terminal
 } from 'lucide-react';
 import { cn, formatNumber, formatDuration } from '@/lib/utils';
 import { useStudioStore } from '@/lib/store';
@@ -30,7 +32,15 @@ interface RealTimeAnalyticsProps {
 }
 
 export function RealTimeAnalytics({ streamId, className }: RealTimeAnalyticsProps) {
-    const { analytics, setAnalytics, stream, isStreaming, streamDuration } = useStudioStore();
+    const {
+        analytics,
+        setAnalytics,
+        stream,
+        isStreaming,
+        streamDuration,
+        aiInsights,
+        directorLogs
+    } = useStudioStore();
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [previousViewers, setPreviousViewers] = useState(0);
 
@@ -272,6 +282,58 @@ export function RealTimeAnalytics({ streamId, className }: RealTimeAnalyticsProp
                                     : 0
                                 }/min
                             </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* AI Insights & Director Logs */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                    {/* AI Insights */}
+                    <div className="p-4 rounded-xl bg-accent-gold/5 border border-accent-gold/10">
+                        <h3 className="text-sm font-medium text-accent-gold mb-3 flex items-center gap-2">
+                            <Sparkles size={14} />
+                            AI Stream Insights
+                        </h3>
+                        <div className="text-sm text-gray-300 leading-relaxed italic">
+                            {aiInsights ? (
+                                aiInsights
+                            ) : (
+                                <span className="text-gray-500">
+                                    AI is currently analyzing your stream data. Insights will appear here every 2 minutes.
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Director Logs */}
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                        <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+                            <Terminal size={14} />
+                            Director Automation Log
+                        </h3>
+                        <div className="space-y-2 max-h-[120px] overflow-y-auto custom-scrollbar pr-2">
+                            {directorLogs.length > 0 ? (
+                                directorLogs.map((log) => (
+                                    <div key={log.id} className="text-[11px] flex gap-2">
+                                        <span className="text-gray-500 whitespace-nowrap">
+                                            {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                        </span>
+                                        <span className={cn(
+                                            'font-medium',
+                                            log.type === 'success' && 'text-green-400',
+                                            log.type === 'warning' && 'text-amber-400',
+                                            log.type === 'info' && 'text-blue-400'
+                                        )}>
+                                            [{log.type.toUpperCase()}]
+                                        </span>
+                                        <span className="text-gray-400">{log.message}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-4 text-gray-500 text-xs italic">
+                                    No automation events logged yet.
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

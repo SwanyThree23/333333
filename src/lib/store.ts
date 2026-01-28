@@ -11,6 +11,8 @@ interface StudioState {
     scenes: Scene[];
     activeScene: Scene | null;
     previewScene: Scene | null;
+    isTransitioning: boolean;
+    setIsTransitioning: (isTransitioning: boolean) => void;
 
     // Avatar State
     avatars: AIAvatar[];
@@ -30,8 +32,15 @@ interface StudioState {
     // UI State
     sidebarOpen: boolean;
     activePanel: 'scenes' | 'layout' | 'sources' | 'chat' | 'guests' | 'settings';
+    aiDirectorEnabled: boolean;
+    directorLogs: { id: string; timestamp: Date; message: string; type: 'info' | 'success' | 'warning' }[];
+    aiInsights: string | null;
 
     // Actions
+    setAiDirectorEnabled: (enabled: boolean) => void;
+    addDirectorLog: (log: { message: string; type: 'info' | 'success' | 'warning' }) => void;
+    setDirectorLogs: (logs: { id: string; timestamp: Date; message: string; type: 'info' | 'success' | 'warning' }[]) => void;
+    setAiInsights: (insights: string | null) => void;
     setStream: (stream: Stream | null) => void;
     startStream: () => void;
     stopStream: () => void;
@@ -71,6 +80,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     scenes: [],
     activeScene: null,
     previewScene: null,
+    isTransitioning: false,
 
     avatars: [],
     activeAvatar: null,
@@ -85,8 +95,17 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
     sidebarOpen: true,
     activePanel: 'scenes',
+    aiDirectorEnabled: false,
+    directorLogs: [],
+    aiInsights: null,
 
-    // Stream Actions
+    // Actions
+    setAiDirectorEnabled: (enabled) => set({ aiDirectorEnabled: enabled }),
+    addDirectorLog: (log) => set((state) => ({
+        directorLogs: [{ ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date() }, ...state.directorLogs].slice(0, 50)
+    })),
+    setDirectorLogs: (logs) => set({ directorLogs: logs }),
+    setAiInsights: (insights) => set({ aiInsights: insights }),
     setStream: (stream) => set({ stream }),
 
     startStream: () => set({
@@ -124,6 +143,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
     setActiveScene: (scene) => set({ activeScene: scene }),
     setPreviewScene: (scene) => set({ previewScene: scene }),
+    setIsTransitioning: (isTransitioning) => set({ isTransitioning }),
 
     // Avatar Actions
     setAvatars: (avatars) => set({ avatars }),

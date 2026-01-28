@@ -52,17 +52,17 @@ export function useSocket(streamId?: string) {
 
         socket.on('guest:joined', (data) => {
             addGuest({
-                id: data.guestId,
+                id: data.id || data.guestId,
                 name: data.name,
                 status: 'connected',
                 videoEnabled: true,
                 audioEnabled: true,
-                connectionQuality: 'good',
+                connectionQuality: 'excellent',
             });
         });
 
         socket.on('guest:left', (data) => {
-            removeGuest(data.guestId);
+            removeGuest(data.id || data.guestId);
         });
 
         socket.on('stream:viewers', (data) => {
@@ -74,6 +74,33 @@ export function useSocket(streamId?: string) {
                     viewerCount: data.count,
                 });
             }
+        });
+
+        socket.on('scene:switched', (data) => {
+            const store = useStudioStore.getState();
+            const scene = store.scenes.find(s => s.id === data.sceneId);
+            if (scene) {
+                store.setActiveScene(scene);
+            }
+        });
+
+        // --- Guest WebRTC Signaling ---
+        socket.on('guest:signal:offer', (data) => {
+            // Handle incoming offer from guest (if we are the broadcaster)
+            const event = new CustomEvent('guest-offer', { detail: data });
+            window.dispatchEvent(event);
+        });
+
+        socket.on('guest:signal:answer', (data) => {
+            // Handle incoming answer from broadcaster (if we are the guest)
+            const event = new CustomEvent('guest-answer', { detail: data });
+            window.dispatchEvent(event);
+        });
+
+        socket.on('guest:signal:ice', (data) => {
+            // Handle incoming ICE candidate
+            const event = new CustomEvent('guest-ice', { detail: data });
+            window.dispatchEvent(event);
         });
 
         // Cleanup on unmount
@@ -109,9 +136,33 @@ export function useSocket(streamId?: string) {
 
     const sendChatMessage = useCallback((message: any) => {
         if (socketRef.current && streamId) {
-            socketRef.current.emit('chat:send', { streamId, message });
+            socketRef.current.emit('chat:message', { streamId, ...message });
         }
     }, [streamId]);
+
+    // Signaling functions
+    const sendOffer = useCallback((targetStreamId: string, offer: RTCSessionDescriptionInit, guestId: string) => {
+        if (socketRef.current) {
+            socketRef.current.emit('guest:signal:offer', { streamId: targetStreamId, offer, guestId });
+        }
+    }, []);
+
+    const sendAnswer = useCallback((targetSocketId: string, answer: RTCSessionDescriptionInit, guestId: string) => {
+        if (socketRef.current) {
+            socketRef.current.emit('guest:signal:answer', { targetSocketId, answer, guestId });
+        }
+    }, []);
+
+    const sendIceCandidate = useCallback((candidate: RTCIceCandidate, targetStreamId?: string, targetSocketId?: string, guestId?: string) => {
+        if (socketRef.current) {
+            socketRef.current.emit('guest:signal:ice', {
+                streamId: targetStreamId,
+                targetSocketId,
+                candidate,
+                guestId
+            });
+        }
+    }, []);
 
     return {
         socket: socketRef.current,
@@ -120,5 +171,8 @@ export function useSocket(streamId?: string) {
         switchScene,
         speakWithAvatar,
         sendChatMessage,
+        sendOffer,
+        sendAnswer,
+        sendIceCandidate,
     };
 }

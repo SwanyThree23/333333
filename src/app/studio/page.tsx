@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { StudioHeader, StudioSidebar } from '@/components/studio/StudioLayout';
 import { PreviewCanvas, StreamControls } from '@/components/studio/StreamControls';
-import { AnalyticsDashboard } from '@/components/studio/Analytics';
 import { AIControlPanel } from '@/components/studio/AIControlPanel';
 import { useStudioStore } from '@/lib/store';
 import { useSocket } from '@/lib/socket';
@@ -92,6 +91,7 @@ const demoChatMessages: ChatMessage[] = [
 
 import { RealTimeAnalytics } from '@/components/studio/RealTimeAnalytics';
 import { GuestVideoGrid } from '@/components/studio/GuestManager';
+import { AIDirector } from '@/components/studio/AIDirector';
 import { streamApi, sceneApi, Stream as ApiStream } from '@/lib/api';
 
 export default function StudioPage() {
@@ -105,6 +105,8 @@ export default function StudioPage() {
         setAvatars,
         setActiveAvatar,
         setAnalytics,
+        setAiDirectorEnabled,
+        setAiInsights,
         stream,
         isStreaming
     } = useStudioStore();
@@ -150,6 +152,14 @@ export default function StudioPage() {
 
                 setStreamId(activeStream.id);
                 setStream(activeStream as any);
+
+                // Set AI Director state from DB
+                if ((activeStream as any).aiDirectorEnabled !== undefined) {
+                    setAiDirectorEnabled((activeStream as any).aiDirectorEnabled);
+                }
+                if ((activeStream as any).latestAiInsights) {
+                    setAiInsights((activeStream as any).latestAiInsights);
+                }
 
                 // 3. Load scenes
                 const scenesRes = await sceneApi.list(activeStream.id);
@@ -203,7 +213,7 @@ export default function StudioPage() {
                                 >
                                     <PreviewCanvas className="h-full w-full" />
                                     <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
-                                        <GuestVideoGrid className="max-w-[400px] pointer-events-auto" />
+                                        <GuestVideoGrid streamId={streamId} className="max-w-[400px] pointer-events-auto" />
                                     </div>
                                 </motion.div>
                                 <StreamControls />

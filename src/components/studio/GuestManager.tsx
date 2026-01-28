@@ -28,6 +28,8 @@ interface GuestManagerProps {
     className?: string;
 }
 
+import { useSocket } from '@/lib/socket';
+
 export function GuestManager({ streamId, className }: GuestManagerProps) {
     const { guests, addGuest, removeGuest, updateGuestStatus } = useStudioStore();
     const [showInviteModal, setShowInviteModal] = useState(false);
@@ -36,12 +38,14 @@ export function GuestManager({ streamId, className }: GuestManagerProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
+    const { sendAnswer, sendIceCandidate } = useSocket(streamId);
+
     const handleInvite = async () => {
         if (!inviteName.trim()) return;
         setIsLoading(true);
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/guests`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/guests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ streamId, name: inviteName, email: inviteEmail }),
@@ -49,7 +53,13 @@ export function GuestManager({ streamId, className }: GuestManagerProps) {
 
             const data = await res.json();
             if (data.guest) {
-                addGuest(data.guest);
+                // The backend emit will trigger guest:joined, but we also add it here for immediate feedback
+                addGuest({
+                    ...data.guest,
+                    status: 'invited',
+                    videoEnabled: true,
+                    audioEnabled: true,
+                });
                 setInviteName('');
                 setInviteEmail('');
                 setShowInviteModal(false);
@@ -291,47 +301,145 @@ export function GuestManager({ streamId, className }: GuestManagerProps) {
     );
 }
 
-interface GuestVideoGridProps {
-    className?: string;
+export function GuestVideo({ guest, streamId }: { guest: Guest; streamId: string }) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const peerConnection = useRef<RTCPeerConnection | null>(null);
+    const { sendAnswer, sendIceCandidate } = useSocket(streamId);
+
+    useEffect(() => {
+        const handleOffer = async (e: any) => {
+            const { offer, socketId } = e.detail;
+
+            try {
+                peerConnection.current = new RTCPeerConnection({
+                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                });
+
+                peerConnection.current.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        sendIceCandidate(event.candidate, undefined, socketId, guest.id);
+                    }
+                };
+
+                peerConnection.current.ontrack = (event) => {
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = event.streams[0];
+                    }
+                };
+
+                await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await peerConnection.current.createAnswer();
+                await peerConnection.current.setLocalDescription(answer);
+
+                sendAnswer(socketId, answer, guest.id);
+            } catch (err) {
+                console.error("Failed to handle guest offer:", err);
+            }
+        };
+
+        const handleIce = async (e: any) => {
+            const { candidate } = e.detail;
+            if (peerConnection.current) {
+                await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+        };
+
+        const offerEvent = `signaling:offer:${guest.id}`;
+        const iceEvent = `signaling:ice:${guest.id}`;
+
+        window.addEventListener(offerEvent, handleOffer as EventListener);
+        window.addEventListener(iceEvent, handleIce as EventListener);
+
+        return () => {
+            window.removeEventListener(offerEvent, handleOffer as EventListener);
+            window.removeEventListener(iceEvent, handleIce as EventListener);
+            if (peerConnection.current) peerConnection.current.close();
+        };
+    }, [guest.id, streamId, sendAnswer, sendIceCandidate]);
+
+    return (
+        <div className="relative aspect-video bg-surface-400 rounded-xl overflow-hidden shadow-lg border border-white/5">
+            <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className={cn(
+                    "w-full h-full object-cover transition-opacity duration-500",
+                    guest.status === 'connected' ? "opacity-100" : "opacity-0"
+                )}
+            />
+
+            {guest.status !== 'connected' && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-accent-burgundy/20 to-accent-gold/20 backdrop-blur-sm">
+                    <div className="text-center">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent-burgundy to-accent-gold flex items-center justify-center font-bold text-2xl text-white mx-auto mb-2 shadow-neon-burgundy">
+                            {guest.name.charAt(0).toUpperCase()}
+                        </div>
+                        <p className="text-xs text-gray-400 animate-pulse">Waiting for connection...</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Guest Info Overlay */}
+            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 to-transparent">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className={cn("w-2 h-2 rounded-full", guest.status === 'connected' ? "bg-green-500 animate-pulse" : "bg-gray-500")} />
+                        <span className="text-sm font-semibold truncate text-white">{guest.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {!guest.audioEnabled && <div className="p-1 rounded bg-red-500/20"><MicOff size={12} className="text-red-400" /></div>}
+                        {!guest.videoEnabled && <div className="p-1 rounded bg-red-500/20"><VideoOff size={12} className="text-red-400" /></div>}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
-export function GuestVideoGrid({ className }: GuestVideoGridProps) {
+export function GuestVideoGrid({ className, streamId }: { className?: string; streamId: string }) {
     const { guests } = useStudioStore();
-    const connectedGuests = guests.filter(g => g.status === 'connected');
+    const visibleGuests = guests.filter(g => g.status === 'connected' || g.status === 'waiting');
 
-    if (connectedGuests.length === 0) return null;
+    // Handle Signaling Redirection (Important for Overlay support)
+    useEffect(() => {
+        const handleOffer = async (e: any) => {
+            const { offer, guestId, socketId } = e.detail;
+            const event = new CustomEvent(`signaling:offer:${guestId}`, {
+                detail: { offer, socketId }
+            });
+            window.dispatchEvent(event);
+        };
 
-    const gridCols = connectedGuests.length === 1 ? 1 : connectedGuests.length <= 4 ? 2 : 3;
+        const handleIce = (e: any) => {
+            const { candidate, guestId } = e.detail;
+            const event = new CustomEvent(`signaling:ice:${guestId}`, {
+                detail: { candidate }
+            });
+            window.dispatchEvent(event);
+        };
+
+        window.addEventListener('guest-offer', handleOffer as EventListener);
+        window.addEventListener('guest-ice', handleIce as EventListener);
+
+        return () => {
+            window.removeEventListener('guest-offer', handleOffer as EventListener);
+            window.removeEventListener('guest-ice', handleIce as EventListener);
+        };
+    }, []);
+
+    if (visibleGuests.length === 0) return null;
+
+    const gridCols = visibleGuests.length === 1 ? 1 : visibleGuests.length <= 4 ? 2 : 3;
 
     return (
         <div className={cn(
-            'grid gap-2',
+            'grid gap-3 transition-all duration-500',
             gridCols === 1 ? 'grid-cols-1' : gridCols === 2 ? 'grid-cols-2' : 'grid-cols-3',
             className
         )}>
-            {connectedGuests.map((guest) => (
-                <div
-                    key={guest.id}
-                    className="relative aspect-video bg-surface-400 rounded-xl overflow-hidden"
-                >
-                    {/* Placeholder for actual video stream */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-accent-burgundy/20 to-accent-gold/20">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent-burgundy to-accent-gold flex items-center justify-center font-bold text-2xl text-white">
-                            {guest.name.charAt(0).toUpperCase()}
-                        </div>
-                    </div>
-
-                    {/* Guest Info Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium truncate">{guest.name}</span>
-                            <div className="flex items-center gap-1">
-                                {!guest.audioEnabled && <MicOff size={12} className="text-red-400" />}
-                                {!guest.videoEnabled && <VideoOff size={12} className="text-red-400" />}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            {visibleGuests.map((guest) => (
+                <GuestVideo key={guest.id} guest={guest} streamId={streamId} />
             ))}
         </div>
     );

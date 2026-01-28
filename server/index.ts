@@ -37,15 +37,48 @@ const db = getDatabase();
 // ============================================
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         services: {
-            database: db.getStats(),
+            database: await db.getStats(),
             activeStreams: streamService.getActiveStreams().length,
         }
     });
+});
+
+// Temporary Test Endpoint
+app.post('/api/test/seed', async (req, res) => {
+    try {
+        // Create test user
+        const user = await (db as any).prisma.user.upsert({
+            where: { email: 'director-test@example.com' },
+            update: {},
+            create: {
+                name: 'Director Test',
+                email: 'director-test@example.com',
+            }
+        });
+
+        // Create test stream
+        const stream = await (db as any).prisma.stream.create({
+            data: {
+                userId: user.id,
+                title: 'Director Test Stream',
+                status: 'live',
+                aiDirectorEnabled: true
+            }
+        });
+
+        // Add to stream service to make it "active"
+        streamService.addStream(stream.id, stream as any);
+
+        res.json({ userId: user.id, streamId: stream.id });
+    } catch (error) {
+        console.error('Seed error:', error);
+        res.status(500).json({ error: String(error) });
+    }
 });
 
 // ---- Stream Routes ----
@@ -295,6 +328,56 @@ app.post('/api/ai/chat-response', async (req, res) => {
         res.json({ response });
     } catch (error) {
         res.status(500).json({ error: 'Failed to generate response' });
+    }
+});
+
+app.post('/api/ai/analyze-engagement', async (req, res) => {
+    try {
+        const { streamId, viewerCount, chatActivity, sceneChanges } = req.body;
+        const insights = await openai.analyzeEngagement(viewerCount, chatActivity, sceneChanges);
+
+        if (streamId) {
+            await db.updateStreamConfig(streamId, { latestAiInsights: insights });
+        }
+
+        res.json({ insights });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to analyze engagement' });
+    }
+});
+
+app.get('/api/streams/:streamId/director-events', async (req, res) => {
+    try {
+        const events = await db.getDirectorEvents(req.params.streamId);
+        res.json(events);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get director events' });
+    }
+});
+
+app.post('/api/streams/:streamId/config', async (req, res) => {
+    try {
+        const { aiDirectorEnabled } = req.body;
+        await db.updateStreamConfig(req.params.streamId, { aiDirectorEnabled });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update stream configuration' });
+    }
+});
+
+app.post('/api/streams/:streamId/director-events', async (req, res) => {
+    try {
+        const { type, message, metadata } = req.body;
+        const event = await db.recordDirectorEvent({
+            streamId: req.params.streamId,
+            type,
+            message,
+            metadata,
+            timestamp: new Date()
+        });
+        res.json(event);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to record director event' });
     }
 });
 

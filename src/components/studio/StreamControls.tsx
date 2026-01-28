@@ -24,6 +24,33 @@ interface PreviewCanvasProps {
     className?: string;
 }
 
+const transitionVariants = {
+    fade: {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
+        transition: { duration: 0.3 }
+    },
+    slide: {
+        initial: { x: '100%' },
+        animate: { x: 0 },
+        exit: { x: '-100%' },
+        transition: { type: 'spring', damping: 20, stiffness: 100 }
+    },
+    zoom: {
+        initial: { scale: 0.8, opacity: 0 },
+        animate: { scale: 1, opacity: 1 },
+        exit: { scale: 1.2, opacity: 0 },
+        transition: { duration: 0.4 }
+    },
+    cut: {
+        initial: { opacity: 1 },
+        animate: { opacity: 1 },
+        exit: { opacity: 1 },
+        transition: { duration: 0 }
+    }
+};
+
 export function PreviewCanvas({ className }: PreviewCanvasProps) {
     const { activeScene, isStreaming, streamDuration, updateStreamDuration, activeAvatar, stream } = useStudioStore();
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -40,41 +67,52 @@ export function PreviewCanvas({ className }: PreviewCanvasProps) {
         return () => clearInterval(interval);
     }, [isStreaming, streamDuration, updateStreamDuration]);
 
+    const currentTransition = activeScene?.transitionType || 'fade';
+    const variants = transitionVariants[currentTransition as keyof typeof transitionVariants] || transitionVariants.fade;
+
     return (
         <div className={cn('relative rounded-2xl overflow-hidden', className)}>
             {/* Preview Area */}
             <div className="aspect-video bg-surface-400 relative">
                 {/* Scene Preview */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                    {activeScene ? (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="w-full h-full bg-surface-500 flex items-center justify-center overflow-hidden"
-                        >
-                            {activeAvatar ? (
-                                <WebRTCAvatar
-                                    avatarId={activeAvatar.id}
-                                    streamId={stream?.id || 'demo-stream'}
-                                    className="w-full h-full"
-                                />
-                            ) : (
-                                <div className="text-center">
-                                    <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-gradient-to-br from-accent-burgundy/30 to-accent-gold/30 flex items-center justify-center backdrop-blur-xl">
-                                        <Sparkles size={48} className="text-accent-gold" />
+                <div className="absolute inset-0">
+                    <AnimatePresence mode="wait">
+                        {activeScene ? (
+                            <motion.div
+                                key={activeScene.id}
+                                {...variants}
+                                className="w-full h-full bg-surface-500 flex items-center justify-center overflow-hidden"
+                            >
+                                {activeAvatar ? (
+                                    <WebRTCAvatar
+                                        avatarId={activeAvatar.id}
+                                        streamId={stream?.id || 'demo-stream'}
+                                        className="w-full h-full"
+                                    />
+                                ) : (
+                                    <div className="text-center">
+                                        <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-gradient-to-br from-accent-burgundy/30 to-accent-gold/30 flex items-center justify-center backdrop-blur-xl">
+                                            <Sparkles size={48} className="text-accent-gold" />
+                                        </div>
+                                        <h3 className="text-xl font-semibold mb-1">{activeScene.name}</h3>
+                                        <p className="text-gray-400 text-sm">{activeScene.sources.length} sources configured</p>
                                     </div>
-                                    <h3 className="text-xl font-semibold mb-1">{activeScene.name}</h3>
-                                    <p className="text-gray-400 text-sm">{activeScene.sources.length} sources configured</p>
-                                </div>
-                            )}
-                        </motion.div>
-                    ) : (
-                        <div className="text-center text-gray-500">
-                            <Eye size={48} className="mx-auto mb-4 opacity-50" />
-                            <p className="text-lg">No scene selected</p>
-                            <p className="text-sm">Select a scene to preview</p>
-                        </div>
-                    )}
+                                )}
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="no-scene"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="flex flex-col items-center justify-center h-full text-gray-500"
+                            >
+                                <Radio size={48} className="mx-auto mb-4 opacity-50" />
+                                <p className="text-lg">No scene selected</p>
+                                <p className="text-sm">Select a scene to preview</p>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 {/* Live Overlay */}

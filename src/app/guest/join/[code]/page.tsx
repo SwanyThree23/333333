@@ -5,24 +5,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Video, VideoOff, Settings, Camera, Sparkles, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParams, useRouter } from 'next/navigation';
+import { useSocket } from '@/lib/socket';
 
 export default function GuestJoinPage() {
     const { code } = useParams();
     const router = useRouter();
     const videoRef = useRef<HTMLVideoElement>(null);
+    const peerConnection = useRef<RTCPeerConnection | null>(null);
+    const localStream = useRef<MediaStream | null>(null);
 
     const [status, setStatus] = useState<'preview' | 'joining' | 'connected' | 'error'>('preview');
     const [guest, setGuest] = useState<any>(null);
-    const [stream, setStream] = useState<any>(null);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const { sendOffer, sendIceCandidate } = useSocket(guest?.streamId);
 
     // Initial check of the code
     useEffect(() => {
         const checkInvite = async () => {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/guests/join/${code}`, {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/guests/join/${code}`, {
                     method: 'POST'
                 });
                 const data = await res.json();
@@ -34,7 +38,6 @@ export default function GuestJoinPage() {
                 }
 
                 setGuest(data.guest);
-                // In a real app we'd also fetch stream details
             } catch (err) {
                 setError('Failed to connect to server');
                 setStatus('error');
@@ -47,22 +50,90 @@ export default function GuestJoinPage() {
     // Setup local camera preview
     useEffect(() => {
         if (status === 'preview' && videoRef.current) {
-            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            navigator.mediaDevices.getUserMedia({
+                video: { width: 1280, height: 720 },
+                audio: true
+            })
                 .then(stream => {
+                    localStream.current = stream;
                     if (videoRef.current) {
                         videoRef.current.srcObject = stream;
                     }
                 })
-                .catch(err => console.error("Could not access camera:", err));
+                .catch(err => {
+                    console.error("Could not access camera:", err);
+                    setError("Camera/Microphone access is required to join the stream.");
+                });
         }
+
+        return () => {
+            if (status === 'preview' && localStream.current) {
+                localStream.current.getTracks().forEach(track => track.stop());
+            }
+        };
     }, [status]);
 
+    // Handle Signaling
+    useEffect(() => {
+        const handleAnswer = async (e: any) => {
+            const { answer, guestId } = e.detail;
+            if (guestId === guest?.id && peerConnection.current) {
+                await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+                setStatus('connected');
+            }
+        };
+
+        const handleIce = async (e: any) => {
+            const { candidate, guestId } = e.detail;
+            if (guestId === guest?.id && peerConnection.current) {
+                await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+        };
+
+        window.addEventListener('guest-answer', handleAnswer as EventListener);
+        window.addEventListener('guest-ice', handleIce as EventListener);
+
+        return () => {
+            window.removeEventListener('guest-answer', handleAnswer as EventListener);
+            window.removeEventListener('guest-ice', handleIce as EventListener);
+        };
+    }, [guest]);
+
     const handleJoin = async () => {
+        if (!guest || !localStream.current) return;
+
         setStatus('joining');
-        // Simulate WebRTC connection
-        setTimeout(() => {
-            setStatus('connected');
-        }, 2000);
+
+        try {
+            // 1. Create PeerConnection
+            peerConnection.current = new RTCPeerConnection({
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            });
+
+            // 2. Add local tracks
+            localStream.current.getTracks().forEach(track => {
+                peerConnection.current?.addTrack(track, localStream.current!);
+            });
+
+            // 3. Handle ICE candidates
+            peerConnection.current.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
+                if (event.candidate) {
+                    sendIceCandidate(event.candidate, guest.streamId, undefined, guest.id);
+                }
+            };
+
+            // 4. Create offer
+            const offer = await peerConnection.current.createOffer();
+            await peerConnection.current.setLocalDescription(offer);
+
+            // 5. Send offer to broadcaster
+            sendOffer(guest.streamId, offer, guest.id);
+
+        } catch (err) {
+            console.error("WebRTC Error:", err);
+            setError("Failed to establish secure connection.");
+            setStatus('error');
+        }
     };
 
     if (status === 'error') {

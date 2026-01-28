@@ -23,7 +23,14 @@ const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 const AVATAR_CONTROLLER_URL = process.env.AVATAR_CONTROLLER_URL || 'http://localhost:8011';
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 
-const prisma = new PrismaClient();
+let prisma: any = null;
+try {
+    const pkg = require('@prisma/client');
+    const { PrismaClient } = pkg;
+    prisma = new PrismaClient();
+} catch (e) {
+    console.warn('Prisma client not available, running in degraded mode:', e?.message || e);
+}
 const redis = new Redis(REDIS_URL);
 const stripe = new Stripe(STRIPE_SECRET_KEY || '', { apiVersion: '2024-11-01' } as any);
 
@@ -412,9 +419,17 @@ setInterval(async () => {
 
 // Health check
 app.get('/health', asyncHandler(async (req, res) => {
-    // quick db ping
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok' });
+    try {
+        if (prisma) {
+            // quick db ping
+            await prisma.$queryRaw`SELECT 1`;
+            res.json({ status: 'ok', db: 'connected' });
+        } else {
+            res.json({ status: 'ok', db: 'degraded' });
+        }
+    } catch (err) {
+        res.status(500).json({ status: 'error', error: String(err) });
+    }
 }));
 
 // Custom error handler

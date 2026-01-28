@@ -1,0 +1,22 @@
+{
+    "name": "Subscription Management",
+    "nodes": [
+        {
+            "name": "Stripe Webhook",
+            "type": "n8n-nodes-base.webhook"
+        },
+        {
+            "name": "Verify Signature",
+            "type": "n8n-nodes-base.function"
+        },
+        {
+            "name": "DB Update",
+            "type": "n8n-nodes-base.postgres"
+        },
+        {
+            "name": "Send Email",
+            "type": "n8n-nodes-base.smtp"
+        }
+    ],
+    "connections": {}
+}

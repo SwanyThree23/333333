@@ -1,4 +1,4 @@
-'use client';
+'uyesse client';
 
 import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';

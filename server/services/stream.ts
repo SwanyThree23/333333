@@ -90,6 +90,13 @@ export class StreamService {
     }
 
     /**
+     * Add an existing stream to the active streams list
+     */
+    addStream(streamId: string, config: StreamConfig): void {
+        this.activeStreams.set(streamId, config);
+    }
+
+    /**
      * Add a platform destination to the stream
      */
     addPlatform(

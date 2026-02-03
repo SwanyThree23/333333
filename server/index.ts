@@ -3,6 +3,8 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
 import { v4 as uuidv4 } from 'uuid';
 
 // Import services
@@ -11,18 +13,29 @@ import { getElevenLabsService } from './services/elevenlabs';
 import { getOpenAIService } from './services/openai';
 import { getStreamService } from './services/stream';
 import { getDatabase } from './services/database';
+import { getAuditService } from './services/enterprise/audit';
+
+// Import modules
+import { swaggerSpec } from './swagger';
+import enterpriseRoutes from './routes/enterprise';
 
 const app = express();
 const httpServer = createServer(app);
-
 const io = new SocketIOServer(httpServer, {
     cors: {
-        origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+        origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
         methods: ['GET', 'POST'],
     },
 });
 
-app.use(cors());
+// Security layer
+app.use(helmet({
+    contentSecurityPolicy: false, // Disable for development if needed, or configure properly
+}));
+app.use(cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    credentials: true,
+}));
 app.use(express.json());
 
 // Initialize services
@@ -31,6 +44,10 @@ const elevenlabs = getElevenLabsService();
 const openai = getOpenAIService();
 const streamService = getStreamService();
 const db = getDatabase();
+const audit = getAuditService();
+
+// Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ============================================
 // REST API Routes
@@ -40,6 +57,7 @@ const db = getDatabase();
 app.get('/api/health', async (req, res) => {
     res.json({
         status: 'ok',
+        version: '1.0.0-enterprise',
         timestamp: new Date().toISOString(),
         services: {
             database: await db.getStats(),
@@ -48,16 +66,43 @@ app.get('/api/health', async (req, res) => {
     });
 });
 
+// Enterprise Routes
+app.use('/api/enterprise', enterpriseRoutes);
+
 // Temporary Test Endpoint
 app.post('/api/test/seed', async (req, res) => {
     try {
-        // Create test user
+        // Create admin user
+        const admin = await (db as any).prisma.user.upsert({
+            where: { email: 'admin@swanythree.com' },
+            update: {},
+            create: {
+                name: 'Admin User',
+                email: 'admin@swanythree.com',
+                role: 'ADMIN',
+            }
+        });
+
+        // Create test enterprise user
         const user = await (db as any).prisma.user.upsert({
             where: { email: 'director-test@example.com' },
             update: {},
             create: {
                 name: 'Director Test',
                 email: 'director-test@example.com',
+                role: 'ENTERPRISE',
+            }
+        });
+
+        // Seed subscription
+        await (db as any).prisma.subscription.upsert({
+            where: { stripeSubscriptionId: 'sub_test_123' },
+            update: {},
+            create: {
+                userId: user.id,
+                planId: 'enterprise',
+                status: 'active',
+                stripeSubscriptionId: 'sub_test_123'
             }
         });
 
@@ -65,7 +110,7 @@ app.post('/api/test/seed', async (req, res) => {
         const stream = await (db as any).prisma.stream.create({
             data: {
                 userId: user.id,
-                title: 'Director Test Stream',
+                title: 'Enterprise Live Event',
                 status: 'live',
                 aiDirectorEnabled: true
             }
@@ -74,7 +119,7 @@ app.post('/api/test/seed', async (req, res) => {
         // Add to stream service to make it "active"
         streamService.addStream(stream.id, stream as any);
 
-        res.json({ userId: user.id, streamId: stream.id });
+        res.json({ adminId: admin.id, userId: user.id, streamId: stream.id, enterprise: true });
     } catch (error) {
         console.error('Seed error:', error);
         res.status(500).json({ error: String(error) });
@@ -623,28 +668,39 @@ const PORT = process.env.PORT || 3001;
 
 httpServer.listen(PORT, () => {
     console.log(`
-  🚀 AI Avatar Livestream Server
-  ================================
+  🚀 AI Avatar Livestream Server (Enterprise Edition)
+  ==================================================
   Server:     http://localhost:${PORT}
   WebSocket:  ws://localhost:${PORT}
-  
-  API Endpoints:
-  - POST /api/streams         Create new stream
-  - POST /api/streams/:id/start  Start streaming
-  - GET  /api/avatars         List available avatars
-  - GET  /api/voices          List available voices
-  - POST /api/avatar/speak    Make avatar speak
-  - POST /api/ai/moderate     Moderate chat message
-  - POST /api/ai/generate-script  Generate avatar script
-  - GET  /api/analytics/:id   Get stream analytics
+  Docs:       http://localhost:${PORT}/api-docs
   
   Services initialized:
   - HeyGen Avatar Service
   - ElevenLabs TTS Service  
   - OpenAI AI Service
   - Stream Service
-  - Database Service
+  - Database Service (Neon)
+  - Audit & Compliance Service
+  - Payment & Billing Service
   `);
 });
+
+// Graceful shutdown
+const gracefulShutdown = async () => {
+    console.log('Shutting down gracefully...');
+
+    // Stop analytics interval...
+
+    httpServer.close(() => {
+        console.log('HTTP server closed.');
+        process.exit(0);
+    });
+
+    // Close database
+    await db.disconnect();
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 export { io };

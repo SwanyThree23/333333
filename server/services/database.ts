@@ -1,16 +1,13 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { PrismaNeon } from '@prisma/adapter-neon';
-import ws from 'ws';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-neonConfig.webSocketConstructor = ws;
-// Hardcode to debug "No database host" error
 const connectionString = "postgresql://neondb_owner:npg_SqF9QZ5GVybz@ep-rough-term-afegxq9v-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require";
-console.log('[Database] Connecting to:', connectionString ? connectionString.replace(/:[^:@]+@/, ':***@') : 'UNDEFINED');
+console.log('[Database] Connecting via pg:', connectionString.replace(/:[^:@]+@/, ':***@'));
 
 const pool = new Pool({ connectionString });
-const adapter = new PrismaNeon(pool as any);
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 export class Database {
@@ -219,6 +216,11 @@ export class Database {
             chatMessages: counts[2],
             guests: counts[3]
         };
+    }
+
+    async disconnect() {
+        await prisma.$disconnect();
+        await pool.end();
     }
 }
 

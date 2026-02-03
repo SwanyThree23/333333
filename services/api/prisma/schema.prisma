@@ -8,48 +8,48 @@ datasource db {
 }
 
 model User {
-  id               String   @id @default(uuid())
-  email            String   @unique
-  username         String   @unique
+  id               String  @id @default(uuid())
+  email            String  @unique
+  username         String  @unique
   password         String
-  plan             String   @default("free")
+  plan             String  @default("free")
   stripeCustomerId String?
   avatar           String?
   bio              String?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   streams       Stream[]
   integrations  Integration[]
   chatMessages  ChatMessage[]
   subscriptions Subscription[]
   gameEvents    GameEvent[]
-  
+
   @@index([email])
   @@index([username])
 }
 
 model Stream {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  title        String
-  game         String?
-  description  String?
-  platforms    Json
-  status       String
-  streamKey    String?
-  rtmpUrl      String?
-  
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  game        String?
+  description String?
+  platforms   Json
+  status      String
+  streamKey   String?
+  rtmpUrl     String?
+
   startedAt DateTime
   endedAt   DateTime?
   duration  Int?
-  
+
   analytics    StreamAnalytics?
   chatMessages ChatMessage[]
-  
+
   @@index([userId, status])
   @@index([startedAt])
 }
@@ -58,7 +58,7 @@ model StreamAnalytics {
   id       String @id @default(uuid())
   streamId String @unique
   stream   Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  
+
   peakViewers      Int   @default(0)
   avgViewers       Int   @default(0)
   totalMessages    Int   @default(0)
@@ -66,48 +66,48 @@ model StreamAnalytics {
   subscriptions    Int   @default(0)
   donations        Float @default(0)
   watchTimeMinutes Int   @default(0)
-  
+
   platformStats Json
   hourlyStats   Json
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Integration {
-  id       String @id @default(uuid())
-  userId   String
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   platform     String
   accessToken  String
   refreshToken String?
   tokenExpiry  DateTime?
-  connected    Boolean  @default(true)
-  
+  connected    Boolean   @default(true)
+
   metadata Json?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@unique([userId, platform])
   @@index([userId])
 }
 
 model ChatMessage {
-  id       String @id @default(uuid())
+  id       String  @id @default(uuid())
   userId   String
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   streamId String?
   stream   Stream? @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  
+
   platform  String
   username  String
   message   String
   isCommand Boolean @default(false)
-  
+
   timestamp DateTime @default(now())
-  
+
   @@index([userId, timestamp])
   @@index([streamId, timestamp])
 }
@@ -115,14 +115,15 @@ model ChatMessage {
 model GameEvent {
   id     String @id @default(uuid())
   userId String
-  
+
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   eventType String
   game      String
   action    String
   metadata  Json
-  
+
   timestamp DateTime @default(now())
-  
+
   @@index([userId, game, timestamp])
 }
 
@@ -130,16 +131,16 @@ model Subscription {
   id     String @id @default(uuid())
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  plan               String
-  status             String
-  stripeSubscriptionId String? @unique
-  currentPeriodEnd   DateTime
-  cancelAtPeriodEnd  Boolean @default(false)
-  
+
+  plan                 String
+  status               String
+  stripeSubscriptionId String?  @unique
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean  @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([userId])
   @@index([status])
 }
@@ -147,30 +148,30 @@ model Subscription {
 model AvatarSession {
   id     String @id @default(uuid())
   userId String
-  
-  avatarId      String
-  characterData Json
+
+  avatarId            String
+  characterData       Json
   conversationHistory Json
-  emotionalState Json
-  
+  emotionalState      Json
+
   isActive Boolean @default(true)
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([userId, isActive])
 }
 
 model WebhookLog {
   id String @id @default(uuid())
-  
+
   source    String
   eventType String
   payload   Json
   response  Json?
   success   Boolean
-  
+
   timestamp DateTime @default(now())
-  
+
   @@index([source, timestamp])
 }

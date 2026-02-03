@@ -7,8 +7,7 @@ import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import morgan from 'morgan';
 import { body, validationResult } from 'express-validator';
-// Use require for Prisma client to avoid ESM named-export resolution issues
-const { PrismaClient } = require('@prisma/client');
+// Prisma client will be loaded lazily below; skip top-level require to allow degraded mode
 import Redis from 'ioredis';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -32,6 +31,10 @@ try {
     console.warn('Prisma client not available, running in degraded mode:', e?.message || e);
 }
 const redis = new Redis(REDIS_URL);
+// Handle redis connection errors to avoid unhandled exceptions
+redis.on('error', (err: any) => {
+    console.warn('[ioredis] connection error:', err?.message || err);
+});
 const stripe = new Stripe(STRIPE_SECRET_KEY || '', { apiVersion: '2024-11-01' } as any);
 
 const app = express();

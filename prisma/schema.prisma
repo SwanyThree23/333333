@@ -65,7 +65,8 @@ model Stream {
   description String?
   status      String   @default("scheduled") // scheduled, preparing, live, ended
   quality     String   @default("1080p30")
-  thumbnail   String?
+  aiDirectorEnabled Boolean @default(false)
+  latestAiInsights  Json?
   
   startedAt   DateTime?
   endedAt     DateTime?
@@ -79,6 +80,18 @@ model Stream {
   guests         Guest[]
   analytics      Analytics[]
   avatarSessions AvatarSession[]
+  directorEvents DirectorEvent[]
+}
+
+model DirectorEvent {
+  id        String   @id @default(cuid())
+  streamId  String
+  timestamp DateTime @default(now())
+  type      String   // info, success, warning, error
+  message   String   @db.Text
+  metadata  Json?    // Stores suggestion details like confidence, reasoning
+
+  stream    Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
 }
 
 model Platform {

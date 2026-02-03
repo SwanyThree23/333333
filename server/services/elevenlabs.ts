@@ -152,7 +152,7 @@ export class ElevenLabsService {
             formData.append('description', description);
 
             audioFiles.forEach((file, index) => {
-                formData.append('files', new Blob([file]), `sample_${index}.mp3`);
+                formData.append('files', new Blob([file] as any), `sample_${index}.mp3`);
             });
 
             const response = await this.client.post('/voices/add', formData, {

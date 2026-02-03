@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 }
 
 import { Providers } from '@/components/Providers'
+import { Toaster } from 'sonner'
 
 export default function RootLayout({
     children,
@@ -28,6 +29,7 @@ export default function RootLayout({
                 <Providers>
                     <div className="animated-bg" />
                     {children}
+                    <Toaster position="top-right" richColors theme="dark" />
                 </Providers>
             </body>
         </html>

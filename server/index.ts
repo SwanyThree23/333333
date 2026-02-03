@@ -37,15 +37,48 @@ const db = getDatabase();
 // ============================================
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         services: {
-            database: db.getStats(),
+            database: await db.getStats(),
             activeStreams: streamService.getActiveStreams().length,
         }
     });
+});
+
+// Temporary Test Endpoint
+app.post('/api/test/seed', async (req, res) => {
+    try {
+        // Create test user
+        const user = await (db as any).prisma.user.upsert({
+            where: { email: 'director-test@example.com' },
+            update: {},
+            create: {
+                name: 'Director Test',
+                email: 'director-test@example.com',
+            }
+        });
+
+        // Create test stream
+        const stream = await (db as any).prisma.stream.create({
+            data: {
+                userId: user.id,
+                title: 'Director Test Stream',
+                status: 'live',
+                aiDirectorEnabled: true
+            }
+        });
+
+        // Add to stream service to make it "active"
+        streamService.addStream(stream.id, stream as any);
+
+        res.json({ userId: user.id, streamId: stream.id });
+    } catch (error) {
+        console.error('Seed error:', error);
+        res.status(500).json({ error: String(error) });
+    }
 });
 
 // ---- Stream Routes ----
@@ -62,6 +95,23 @@ app.post('/api/streams', async (req, res) => {
             platforms: platforms || [],
             settings: { quality: quality || '1080p30' },
         });
+
+        // Seed default scenes for the new stream
+        const defaultScenes = [
+            { name: 'Main Scene', layout: 'single', order: 0 },
+            { name: 'Interview', layout: 'side-by-side', order: 1 },
+            { name: 'Screen Share', layout: 'pip', order: 2 },
+            { name: 'BRB Screen', layout: 'single', order: 3 },
+        ];
+
+        for (const scene of defaultScenes) {
+            await db.createScene({
+                streamId: dbStream.id,
+                ...scene,
+                sources: [],
+                isActive: scene.order === 0
+            });
+        }
 
         // Create stream in service
         const streamConfig = streamService.createStream({
@@ -97,6 +147,15 @@ app.get('/api/streams/:id', async (req, res) => {
         return res.status(404).json({ error: 'Stream not found' });
     }
     res.json(stream);
+});
+
+app.get('/api/streams/user/:userId', async (req, res) => {
+    try {
+        const streams = await db.getStreamsByUserId(req.params.userId);
+        res.json(streams);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch user streams' });
+    }
 });
 
 app.post('/api/streams/:id/start', async (req, res) => {
@@ -161,6 +220,16 @@ app.post('/api/avatar/session', async (req, res) => {
         res.json({ success: true, session });
     } catch (error) {
         res.status(500).json({ error: 'Failed to create avatar session' });
+    }
+});
+
+app.post('/api/avatar/session/start', async (req, res) => {
+    try {
+        const { sessionId, sdpAnswer } = req.body;
+        await heygen.startStreamingSession(sessionId, sdpAnswer);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to start avatar session' });
     }
 });
 
@@ -259,6 +328,56 @@ app.post('/api/ai/chat-response', async (req, res) => {
         res.json({ response });
     } catch (error) {
         res.status(500).json({ error: 'Failed to generate response' });
+    }
+});
+
+app.post('/api/ai/analyze-engagement', async (req, res) => {
+    try {
+        const { streamId, viewerCount, chatActivity, sceneChanges } = req.body;
+        const insights = await openai.analyzeEngagement(viewerCount, chatActivity, sceneChanges);
+
+        if (streamId) {
+            await db.updateStreamConfig(streamId, { latestAiInsights: insights });
+        }
+
+        res.json({ insights });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to analyze engagement' });
+    }
+});
+
+app.get('/api/streams/:streamId/director-events', async (req, res) => {
+    try {
+        const events = await db.getDirectorEvents(req.params.streamId);
+        res.json(events);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get director events' });
+    }
+});
+
+app.post('/api/streams/:streamId/config', async (req, res) => {
+    try {
+        const { aiDirectorEnabled } = req.body;
+        await db.updateStreamConfig(req.params.streamId, { aiDirectorEnabled });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update stream configuration' });
+    }
+});
+
+app.post('/api/streams/:streamId/director-events', async (req, res) => {
+    try {
+        const { type, message, metadata } = req.body;
+        const event = await db.recordDirectorEvent({
+            streamId: req.params.streamId,
+            type,
+            message,
+            metadata,
+            timestamp: new Date()
+        });
+        res.json(event);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to record director event' });
     }
 });
 
@@ -433,6 +552,32 @@ io.on('connection', (socket) => {
                 await db.updateAvatarStatus(session.id, 'idle');
                 io.to(`stream:${streamId}`).emit('avatar:finished', { avatarId });
             }, duration);
+        }
+    });
+
+    // --- Guest WebRTC Signaling ---
+    // Guest joins signaling (sending offer to broadcaster)
+    socket.on('guest:signal:offer', (data) => {
+        const { streamId, offer, guestId } = data;
+        // Forward offer to the broadcaster (who is in the stream room)
+        io.to(`stream:${streamId}`).emit('guest:signal:offer', { offer, guestId, socketId: socket.id });
+    });
+
+    // Broadcaster sends answer to guest
+    socket.on('guest:signal:answer', (data) => {
+        const { targetSocketId, answer, guestId } = data;
+        io.to(targetSocketId).emit('guest:signal:answer', { answer, guestId });
+    });
+
+    // ICE Candidate exchange
+    socket.on('guest:signal:ice', (data) => {
+        const { streamId, candidate, guestId, targetSocketId } = data;
+        if (targetSocketId) {
+            // Forward to specific client
+            io.to(targetSocketId).emit('guest:signal:ice', { candidate, guestId });
+        } else {
+            // Forward to broadcaster
+            io.to(`stream:${streamId}`).emit('guest:signal:ice', { candidate, guestId, socketId: socket.id });
         }
     });
 

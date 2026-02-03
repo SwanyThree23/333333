@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { StudioHeader, StudioSidebar } from '@/components/studio/StudioLayout';
 import { PreviewCanvas, StreamControls } from '@/components/studio/StreamControls';
-import { AnalyticsDashboard } from '@/components/studio/Analytics';
 import { AIControlPanel } from '@/components/studio/AIControlPanel';
 import { useStudioStore } from '@/lib/store';
 import { useSocket } from '@/lib/socket';
@@ -90,23 +89,28 @@ const demoChatMessages: ChatMessage[] = [
     { id: 'c4', platform: 'facebook', username: 'LiveFan', message: 'First time here, this is cool!', timestamp: new Date(), highlighted: false },
 ];
 
+import { RealTimeAnalytics } from '@/components/studio/RealTimeAnalytics';
+import { GuestVideoGrid } from '@/components/studio/GuestManager';
+import { AIDirector } from '@/components/studio/AIDirector';
+import { streamApi, sceneApi, Stream as ApiStream } from '@/lib/api';
+
 export default function StudioPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const [streamId] = useState('stream-demo');
-    const { socket, startStream, stopStream } = useSocket(streamId);
-
+    const [streamId, setStreamId] = useState<string>('');
     const {
         setScenes,
         setActiveScene,
         setStream,
         setAvatars,
         setActiveAvatar,
-        addChatMessage,
         setAnalytics,
+        setAiDirectorEnabled,
+        setAiInsights,
         stream,
         isStreaming
     } = useStudioStore();
+    const { socket } = useSocket(streamId || undefined);
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -114,102 +118,74 @@ export default function StudioPage() {
         }
     }, [status, router]);
 
-    // Initialize demo data on mount
+    // Initialize real data on mount
     useEffect(() => {
-        if (status !== 'authenticated') return;
+        if (status !== 'authenticated' || !session?.user?.id) return;
 
-        setScenes(demoScenes);
-        setActiveScene(demoScenes[0]);
-        setStream(demoStream);
-        setAvatars([demoAvatar]);
-        setActiveAvatar(demoAvatar);
+        const initStudio = async () => {
+            try {
+                // 1. Fetch user streams
+                const response = await streamApi.getByUser(session.user.id);
+                let activeStream: ApiStream;
 
-        // Add demo chat messages
-        demoChatMessages.forEach((msg) => addChatMessage(msg));
+                if (response.data && response.data.length > 0) {
+                    activeStream = response.data[0];
+                } else {
+                    // 2. Create default stream if none exists
+                    const createRes = await streamApi.create({
+                        title: `${session.user.name || 'User'}'s Studio`,
+                        description: 'AI-Powered Livestream Session',
+                        platforms: [
+                            { name: 'youtube', streamKey: 'demo-key' },
+                            { name: 'twitch', streamKey: 'demo-key' },
+                            { name: 'facebook', streamKey: 'demo-key' }
+                        ],
+                        quality: '1080p30'
+                    });
 
-        // Set demo analytics
-        setAnalytics({
-            totalViewers: 1234,
-            peakViewers: 1567,
-            averageWatchTime: 542,
-            chatMessages: 342,
-            reactions: 892,
-            shares: 56,
-            newFollowers: 23,
-            platformBreakdown: [
-                { platform: 'youtube', viewers: 756, percentage: 61 },
-                { platform: 'twitch', viewers: 328, percentage: 27 },
-                { platform: 'facebook', viewers: 150, percentage: 12 },
-            ],
-            viewerTimeline: [],
-        });
+                    if (createRes.data) {
+                        activeStream = createRes.data.stream;
+                    } else {
+                        throw new Error('Failed to create stream');
+                    }
+                }
 
-        // Simulate incoming chat messages
-        const chatInterval = setInterval(() => {
-            const platforms = ['youtube', 'twitch', 'facebook'];
-            const usernames = ['Viewer123', 'StreamFan', 'AILover', 'TechGuru', 'CoolDude', 'NewFollower', 'HappyWatcher'];
-            const messages = [
-                'Great stream! 🎉',
-                'Hello from the chat!',
-                'This is so cool!',
-                'How does this work?',
-                'Amazing quality!',
-                'Love the AI avatar!',
-                '👏👏👏',
-                'Just subscribed!',
-                'The future is here!',
-                'Mind blown 🤯',
-            ];
+                setStreamId(activeStream.id);
+                setStream(activeStream as any);
 
-            addChatMessage({
-                id: `chat-${Date.now()}`,
-                platform: platforms[Math.floor(Math.random() * platforms.length)],
-                username: usernames[Math.floor(Math.random() * usernames.length)],
-                message: messages[Math.floor(Math.random() * messages.length)],
-                timestamp: new Date(),
-                highlighted: Math.random() > 0.9,
-            });
-        }, 4000);
+                // Set AI Director state from DB
+                if ((activeStream as any).aiDirectorEnabled !== undefined) {
+                    setAiDirectorEnabled((activeStream as any).aiDirectorEnabled);
+                }
+                if ((activeStream as any).latestAiInsights) {
+                    setAiInsights((activeStream as any).latestAiInsights);
+                }
 
-        // Simulate viewer count changes when streaming
-        const viewerInterval = setInterval(() => {
-            if (isStreaming && stream) {
-                const change = Math.floor(Math.random() * 100) - 30;
-                const newCount = Math.max(0, (stream.viewerCount || 0) + change);
-                setStream({
-                    ...stream,
-                    viewerCount: newCount,
-                });
+                // 3. Load scenes
+                const scenesRes = await sceneApi.list(activeStream.id);
+                if (scenesRes.data) {
+                    setScenes(scenesRes.data as any);
+                    const activeScene = scenesRes.data.find(s => s.isActive) || scenesRes.data[0];
+                    if (activeScene) setActiveScene(activeScene as any);
+                }
+
+                // 4. Load avatars
+                setAvatars([demoAvatar]);
+                setActiveAvatar(demoAvatar);
+
+            } catch (error) {
+                console.error('Error initializing studio:', error);
             }
-        }, 3000);
-
-        return () => {
-            clearInterval(chatInterval);
-            clearInterval(viewerInterval);
         };
-    }, [status]);
 
-    // Update viewer count when streaming
-    useEffect(() => {
-        if (isStreaming && stream) {
-            const interval = setInterval(() => {
-                const change = Math.floor(Math.random() * 50) - 15;
-                const newCount = Math.max(100, (stream.viewerCount || 0) + change);
-                setStream({
-                    ...stream,
-                    viewerCount: newCount,
-                });
-            }, 2000);
-
-            return () => clearInterval(interval);
-        }
-    }, [isStreaming]);
+        initStudio();
+    }, [status, session, setStream, setScenes, setActiveScene, setAvatars, setActiveAvatar]);
 
     if (status === 'loading') {
         return (
             <div className="h-screen w-full flex items-center justify-center bg-surface-500">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-accent-cyan border-t-transparent rounded-full animate-spin" />
+                    <div className="w-12 h-12 border-4 border-accent-gold border-t-transparent rounded-full animate-spin" />
                     <p className="text-gray-400 font-medium">Loading Studio...</p>
                 </div>
             </div>
@@ -220,44 +196,45 @@ export default function StudioPage() {
 
     return (
         <div className="h-screen flex flex-col bg-surface-500 overflow-hidden">
-            {/* Header */}
             <StudioHeader />
 
-            {/* Main Content */}
             <div className="flex-1 flex overflow-hidden">
-                {/* Sidebar */}
                 <StudioSidebar />
 
-                {/* Main Studio Area */}
-                <main className="flex-1 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 overflow-y-auto">
-                    {/* Top Section - Preview & Controls */}
-                    <div className="flex-1 min-h-[400px]">
+                <main className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+                    <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+                        {/* Top Section - Preview & Controls */}
+                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
+                            <div className="xl:col-span-2 space-y-4">
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="aspect-video glass rounded-2xl overflow-hidden relative"
+                                >
+                                    <PreviewCanvas className="h-full w-full" />
+                                    <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
+                                        <GuestVideoGrid streamId={streamId} className="max-w-[400px] pointer-events-auto" />
+                                    </div>
+                                </motion.div>
+                                <StreamControls />
+                            </div>
+
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="h-full"
+                            >
+                                <AIControlPanel streamId={streamId} />
+                            </motion.div>
+                        </div>
+
+                        {/* Bottom Section - Analytics */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="h-full glass rounded-2xl overflow-hidden flex flex-col"
-                        >
-                            <PreviewCanvas className="flex-1" />
-                            <StreamControls />
-                        </motion.div>
-                    </div>
-
-                    {/* Bottom Section - AI Controls & Analytics */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-                        <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.2 }}
                         >
-                            <AIControlPanel streamId={streamId} />
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.3 }}
-                        >
-                            <AnalyticsDashboard />
+                            <RealTimeAnalytics streamId={streamId} />
                         </motion.div>
                     </div>
                 </main>

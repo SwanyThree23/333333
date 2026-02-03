@@ -42,8 +42,8 @@ export default function SignInPage() {
     return (
         <div className="min-h-screen flex items-center justify-center p-6 bg-surface-500 relative overflow-hidden">
             {/* Background elements */}
-            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-accent-cyan/10 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-accent-purple/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-accent-gold/10 rounded-full blur-3xl animate-pulse" />
+            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-accent-burgundy/10 rounded-full blur-3xl animate-pulse [animation-delay:1s]" />
 
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -51,7 +51,7 @@ export default function SignInPage() {
                 className="glass w-full max-w-md rounded-3xl p-8 lg:p-10 relative z-10"
             >
                 <div className="flex flex-col items-center mb-8">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-cyan to-accent-purple flex items-center justify-center mb-4 shadow-neon-cyan">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-burgundy to-accent-gold flex items-center justify-center mb-4 shadow-neon-gold">
                         <Sparkles className="text-white w-8 h-8" />
                     </div>
                     <h1 className="text-3xl font-bold text-white tracking-tight">Welcome Back</h1>
@@ -102,7 +102,7 @@ export default function SignInPage() {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full h-14 rounded-2xl bg-gradient-to-r from-accent-cyan to-accent-purple text-white font-bold text-lg hover:shadow-neon-cyan transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-70 disabled:pointer-events-none"
+                        className="w-full h-14 rounded-2xl bg-gradient-to-r from-accent-burgundy to-accent-gold text-white font-bold text-lg hover:shadow-neon-gold transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-70 disabled:pointer-events-none"
                     >
                         {isLoading ? (
                             <Loader2 className="w-6 h-6 animate-spin" />
@@ -118,7 +118,7 @@ export default function SignInPage() {
                 <div className="mt-8 text-center">
                     <p className="text-gray-400 text-sm">
                         Don't have an account?{' '}
-                        <Link href="/" className="text-accent-cyan hover:underline font-medium">
+                        <Link href="/" className="text-accent-gold hover:underline font-medium">
                             Create one here
                         </Link>
                     </p>

@@ -1,14 +1,23 @@
-/**
- * Database Service backed by Prisma & Neon
- */
-
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import { v4 as uuidv4 } from 'uuid';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { PrismaNeon } from '@prisma/adapter-neon';
+import ws from 'ws';
 
-// Re-exporting prisma client for the server
-const prisma = new PrismaClient();
+neonConfig.webSocketConstructor = ws;
+// Hardcode to debug "No database host" error
+const connectionString = "postgresql://neondb_owner:npg_SqF9QZ5GVybz@ep-rough-term-afegxq9v-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require";
+console.log('[Database] Connecting to:', connectionString ? connectionString.replace(/:[^:@]+@/, ':***@') : 'UNDEFINED');
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaNeon(pool as any);
+const prisma = new PrismaClient({ adapter });
 
 export class Database {
+    public get prisma() {
+        return prisma;
+    }
+
     // User operations
     async createUser(data: any) {
         return await prisma.user.create({ data });
@@ -160,6 +169,30 @@ export class Database {
         return await prisma.analytics.findFirst({
             where: { streamId },
             orderBy: { timestamp: 'desc' }
+        });
+    }
+
+    // Director operations
+    async recordDirectorEvent(data: any) {
+        return await (prisma as any).directorEvent.create({
+            data: {
+                ...data,
+            }
+        });
+    }
+
+    async getDirectorEvents(streamId: string, limit: number = 50) {
+        return await (prisma as any).directorEvent.findMany({
+            where: { streamId },
+            orderBy: { timestamp: 'desc' },
+            take: limit
+        });
+    }
+
+    async updateStreamConfig(streamId: string, data: { aiDirectorEnabled?: boolean, latestAiInsights?: any }) {
+        return await (prisma as any).stream.update({
+            where: { id: streamId },
+            data: data as any
         });
     }
 

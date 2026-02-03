@@ -120,10 +120,14 @@ export class OpenAIService {
         chatHistory: string[],
         availableScenes: string[]
     ): Promise<SceneSuggestion | null> {
-        const systemPrompt = `You are an AI stream director. Based on the current scene, recent chat activity, 
-    and available scenes, suggest when and which scene to switch to for better engagement.
-    Respond in JSON format with: { "name": "scene_name", "description": "reason for switch", 
-    "layout": "suggested_layout", "sources": ["source1", "source2"], "confidence": 0.0-1.0 }`;
+        const systemPrompt = `You are an expert AI Stream Director. Your goal is to maximize viewer retention and engagement by dynamically switching scenes based on the stream's context and chat activity.
+    
+    Guidelines:
+    1. **Context Awareness**: If the chat is asking technical questions, prioritize "Screen Share" or "Tutorial" scenes. If it's general banter, use "Main Scene" or "Just Chatting". If an interview style is detected, use "Side-by-Side".
+    2. **Pacing**: Avoid rapid switching. Maintain a scene for at least 60 seconds unless an urgent context shift occurs.
+    3. **Confidence**: Only suggest a switch if you are >70% confident it fits the current vibration.
+    
+    Respond STRICTLY in JSON format with NO markdown formatting: { "name": "scene_name", "description": "brief, punchy reason for switch", "layout": "suggested_layout", "sources": ["source1", "source2"], "confidence": 0.0-1.0 }`;
 
         try {
             const response = await this.chat({
@@ -132,16 +136,25 @@ export class OpenAIService {
                     {
                         role: 'user',
                         content: `Current scene: ${currentScene}
-            Recent chat: ${chatHistory.slice(-10).join('\n')}
-            Available scenes: ${availableScenes.join(', ')}
-            Should we switch scenes?`
+            Recent chat (last 10 messages):
+            ${chatHistory.slice(-10).join('\n')}
+            
+            Available scenes to switch to: ${availableScenes.join(', ')}
+            
+            Based on this, should we switch scenes? If yes, to which one? If no, return null or the current scene.`
                     },
                 ],
-                temperature: 0.5,
-                max_tokens: 200,
+                temperature: 0.4, // Lower temperature for more consistent JSON
+                max_tokens: 300,
             });
 
-            return JSON.parse(response);
+            let cleanedResponse = response.trim();
+            // Remove markdown code blocks if present
+            cleanedResponse = cleanedResponse.replace(/```json\n?|\n?```/g, '').trim();
+
+            if (!cleanedResponse || cleanedResponse === 'null') return null;
+
+            return JSON.parse(cleanedResponse);
         } catch (error) {
             console.error('Failed to suggest scene:', error);
             return null;
@@ -179,23 +192,29 @@ export class OpenAIService {
         chatActivity: number[],
         sceneChanges: string[]
     ): Promise<string> {
-        const systemPrompt = `You are a stream analytics AI. Analyze the provided metrics and 
-    give actionable insights to improve stream engagement. Be specific and practical.`;
+        const systemPrompt = `You are a real-time Stream Analytics expert. specific, actionable insights to improve stream engagement.
+    
+    Focus on:
+    - **Retention**: Are viewers leaving? Why?
+    - **Interaction**: Is chat checking out? Suggest a prompt or question.
+    - **Pacing**: Are scene changes too frequent or too rare?
+    
+    Output a single, concise paragraph (max 3 sentences) that the streamer can read quickly while live.`;
 
         return this.chat({
             messages: [
                 { role: 'system', content: systemPrompt },
                 {
                     role: 'user',
-                    content: `Viewer count over time: ${viewerCount.join(', ')}
+                    content: `Viewer count trend (last 5 mins): ${viewerCount.join(', ')}
           Chat messages per minute: ${chatActivity.join(', ')}
-          Scene changes: ${sceneChanges.join(' -> ')}
+          Recent scene changes: ${sceneChanges.join(' -> ')}
           
-          What insights can you provide?`,
+          What represents the current stream health and what is one immediate action to take?`
                 },
             ],
             temperature: 0.6,
-            max_tokens: 300,
+            max_tokens: 150,
         });
     }
 

@@ -26,27 +26,27 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
             label: 'Viewers',
             value: stream?.viewerCount || 0,
             icon: <Users size={20} />,
-            color: 'cyan',
+            color: 'gold',
             change: '+12%',
         },
         {
             label: 'Peak Viewers',
             value: analytics?.peakViewers || 0,
             icon: <TrendingUp size={20} />,
-            color: 'purple',
+            color: 'burgundy',
         },
         {
             label: 'Chat Messages',
             value: analytics?.chatMessages || 0,
             icon: <MessageSquare size={20} />,
-            color: 'pink',
+            color: 'gold',
             change: '+28%',
         },
         {
             label: 'Reactions',
             value: analytics?.reactions || 0,
             icon: <Heart size={20} />,
-            color: 'orange',
+            color: 'burgundy',
         },
     ];
 
@@ -54,7 +54,7 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
         <div className={cn('glass rounded-2xl p-6', className)}>
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <BarChart3 size={20} className="text-accent-cyan" />
+                    <BarChart3 size={20} className="text-accent-gold" />
                     Live Analytics
                 </h2>
                 <span className="text-xs text-gray-400">Real-time</span>
@@ -71,10 +71,8 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
                     >
                         <div className={cn(
                             'w-10 h-10 rounded-xl mb-3 flex items-center justify-center',
-                            stat.color === 'cyan' && 'bg-accent-cyan/20 text-accent-cyan',
-                            stat.color === 'purple' && 'bg-accent-purple/20 text-accent-purple',
-                            stat.color === 'pink' && 'bg-accent-pink/20 text-accent-pink',
-                            stat.color === 'orange' && 'bg-accent-orange/20 text-accent-orange',
+                            stat.color === 'gold' && 'bg-accent-gold/20 text-accent-gold',
+                            stat.color === 'burgundy' && 'bg-accent-burgundy/20 text-accent-burgundy',
                         )}>
                             {stat.icon}
                         </div>
@@ -102,7 +100,7 @@ export function AnalyticsDashboard({ className }: AnalyticsDashboardProps) {
                                         initial={{ width: 0 }}
                                         animate={{ width: `${platform.percentage}%` }}
                                         transition={{ duration: 1, ease: 'easeOut' }}
-                                        className="h-full bg-gradient-to-r from-accent-cyan to-accent-purple rounded-full"
+                                        className="h-full bg-gradient-to-r from-accent-burgundy to-accent-gold rounded-full"
                                     />
                                 </div>
                                 <span className="text-sm font-medium w-16 text-right">

@@ -17,6 +17,7 @@ import {
     Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useStudioStore } from '@/lib/store';
 import { avatarApi, aiApi, Avatar, Voice } from '@/lib/api';
 
 interface AIControlPanelProps {
@@ -25,7 +26,8 @@ interface AIControlPanelProps {
 }
 
 export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
-    const [activeTab, setActiveTab] = useState<'speak' | 'script' | 'respond'>('speak');
+    const [activeTab, setActiveTab] = useState<'speak' | 'script' | 'respond' | 'director'>('speak');
+    const { aiDirectorEnabled, setAiDirectorEnabled } = useStudioStore();
     const [text, setText] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -51,6 +53,8 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
     const [chatResponse, setChatResponse] = useState('');
 
     // Load avatars and voices
+    const avatarSessionId = useStudioStore((state) => state.avatarSessionId);
+
     useEffect(() => {
         loadAvatars();
         loadVoices();
@@ -80,7 +84,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
 
         try {
             const { data } = await avatarApi.speak({
-                sessionId: 'demo-session',
+                sessionId: avatarSessionId || 'demo-session',
                 streamId: streamId || 'demo-stream',
                 text,
                 voiceId: selectedVoice?.voice_id,
@@ -153,8 +157,8 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
             {/* Header */}
             <div className="p-4 border-b border-white/10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-cyan/30 to-accent-purple/30 flex items-center justify-center">
-                        <Brain size={20} className="text-accent-cyan" />
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-burgundy/30 to-accent-gold/30 flex items-center justify-center">
+                        <Brain size={20} className="text-accent-gold" />
                     </div>
                     <div>
                         <h3 className="font-semibold">AI Control Center</h3>
@@ -171,10 +175,11 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                     { id: 'speak', icon: <Mic size={16} />, label: 'Speak' },
                     { id: 'script', icon: <Wand2 size={16} />, label: 'Script' },
                     { id: 'respond', icon: <MessageSquare size={16} />, label: 'Respond' },
+                    { id: 'director', icon: <Sparkles size={16} />, label: 'Director' },
                 ].map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                        onClick={() => setActiveTab(tab.id as any)}
                         className={cn(
                             'flex-1 py-3 px-4 flex items-center justify-center gap-2 transition-all duration-200',
                             activeTab === tab.id
@@ -183,7 +188,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                         )}
                     >
                         {tab.icon}
-                        <span className="text-sm font-medium">{tab.label}</span>
+                        <span className="text-sm font-medium hidden sm:inline">{tab.label}</span>
                     </button>
                 ))}
             </div>
@@ -229,7 +234,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                                                 >
                                                     <span>{avatar.avatar_name}</span>
                                                     {selectedAvatar?.avatar_id === avatar.avatar_id && (
-                                                        <Check size={14} className="text-accent-cyan" />
+                                                        <Check size={14} className="text-accent-gold" />
                                                     )}
                                                 </button>
                                             ))}
@@ -278,7 +283,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                                                         </span>
                                                     </div>
                                                     {selectedVoice?.voice_id === voice.voice_id && (
-                                                        <Check size={14} className="text-accent-cyan" />
+                                                        <Check size={14} className="text-accent-gold" />
                                                     )}
                                                 </button>
                                             ))}
@@ -297,7 +302,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                                     className={cn(
                                         'px-3 py-1 text-xs rounded-md transition-colors',
                                         voiceProvider === 'elevenlabs'
-                                            ? 'bg-accent-purple text-white'
+                                            ? 'bg-accent-burgundy text-white'
                                             : 'text-gray-400 hover:text-white'
                                     )}
                                 >
@@ -308,7 +313,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                                     className={cn(
                                         'px-3 py-1 text-xs rounded-md transition-colors',
                                         voiceProvider === 'heygen'
-                                            ? 'bg-accent-cyan text-white'
+                                            ? 'bg-accent-gold text-white'
                                             : 'text-gray-400 hover:text-white'
                                     )}
                                 >
@@ -338,7 +343,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                             className={cn(
                                 'w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2',
                                 text.trim() && selectedAvatar && !isSpeaking
-                                    ? 'bg-gradient-to-r from-accent-cyan to-accent-purple text-white hover:shadow-neon-cyan'
+                                    ? 'bg-gradient-to-r from-accent-burgundy to-accent-gold text-white hover:shadow-neon-gold'
                                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                             )}
                         >
@@ -377,6 +382,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                                 value={scriptStyle}
                                 onChange={(e) => setScriptStyle(e.target.value)}
                                 className="input-field"
+                                title="Script Style"
                             >
                                 <option value="professional">Professional</option>
                                 <option value="casual">Casual & Friendly</option>
@@ -392,7 +398,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                             className={cn(
                                 'w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2',
                                 scriptTopic.trim() && !isProcessing
-                                    ? 'bg-accent-purple text-white hover:bg-accent-purple/80'
+                                    ? 'bg-accent-burgundy text-white hover:bg-accent-burgundy/80'
                                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                             )}
                         >
@@ -450,7 +456,7 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                             className={cn(
                                 'w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2',
                                 chatQuestion.trim() && !isProcessing
-                                    ? 'bg-accent-pink text-white hover:bg-accent-pink/80'
+                                    ? 'bg-accent-gold text-white hover:bg-accent-gold/80'
                                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                             )}
                         >
@@ -484,6 +490,75 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                             </div>
                         )}
                     </>
+                )}
+
+                {/* Director Tab */}
+                {activeTab === 'director' && (
+                    <div className="space-y-6 py-2">
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-surface-400 border border-white/5">
+                            <div className="space-y-1">
+                                <h4 className="font-semibold text-white flex items-center gap-2">
+                                    <Sparkles size={16} className="text-accent-gold" />
+                                    Auto-Director Mode
+                                </h4>
+                                <p className="text-xs text-gray-400 max-w-[200px]">
+                                    AI will automatically switch scenes based on chat engagement and stream context.
+                                </p>
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    const nextState = !aiDirectorEnabled;
+                                    setAiDirectorEnabled(nextState);
+                                    if (streamId) {
+                                        try {
+                                            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/streams/${streamId}/config`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ aiDirectorEnabled: nextState })
+                                            });
+                                        } catch (error) {
+                                            console.error('Failed to sync director state:', error);
+                                        }
+                                    }
+                                }}
+                                title={aiDirectorEnabled ? "Disable AI Director" : "Enable AI Director"}
+                                className={cn(
+                                    "relative w-12 h-6 rounded-full transition-colors duration-300",
+                                    aiDirectorEnabled ? "bg-accent-gold" : "bg-gray-700"
+                                )}
+                            >
+                                <motion.div
+                                    animate={{ x: aiDirectorEnabled ? 26 : 4 }}
+                                    className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
+                                />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">How it works</h4>
+                            <div className="grid gap-3">
+                                {[
+                                    { title: 'Engagement Analysis', desc: 'Monitors chat velocity and sentiment.' },
+                                    { title: 'Contextual Switching', desc: 'Detects topics and switches to relevant layouts.' },
+                                    { title: 'Smart Cooldown', desc: 'Prevents rapid switches for a professional feel.' }
+                                ].map((item, i) => (
+                                    <div key={i} className="flex gap-3 p-3 rounded-xl bg-white/5">
+                                        <div className="w-6 h-6 rounded-full bg-accent-gold/10 flex items-center justify-center text-accent-gold text-xs font-bold">
+                                            {i + 1}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-200">{item.title}</p>
+                                            <p className="text-xs text-gray-500">{item.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-accent-burgundy/10 border border-accent-burgundy/20 text-xs text-accent-burgundy">
+                            <strong>Note:</strong> Auto-Director requires an active stream to function correctly.
+                        </div>
+                    </div>
                 )}
             </div>
         </div>

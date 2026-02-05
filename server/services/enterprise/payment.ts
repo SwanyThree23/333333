@@ -39,9 +39,29 @@ export class PaymentService {
         }
     }
 
-    async handleWebhook(event: any) {
-        // Logic for handling stripe webhooks (invoice.paid, etc)
-        console.log('Handling Stripe Webhook Event:', event.type);
+    async handleWebhook(event: { type: string, data: { object: any } }) {
+        const { type, data } = event;
+        const stripeObject = data.object;
+
+        switch (type) {
+            case 'invoice.paid':
+                // Update subscription status or record transaction
+                // @ts-ignore
+                await this.db.prisma.subscription.updateMany({
+                    where: { stripeSubscriptionId: stripeObject.subscription },
+                    data: { status: 'active', currentPeriodEnd: new Date(stripeObject.lines.data[0].period.end * 1000) }
+                });
+                break;
+            case 'customer.subscription.deleted':
+                // @ts-ignore
+                await this.db.prisma.subscription.updateMany({
+                    where: { stripeSubscriptionId: stripeObject.id },
+                    data: { status: 'canceled' }
+                });
+                break;
+            default:
+                console.log('Unhandled event type:', type);
+        }
     }
 
     async createTransaction(params: {

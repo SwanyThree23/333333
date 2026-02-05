@@ -147,10 +147,11 @@ export class Database {
 
     // Analytics operations
     async recordAnalytics(data: any) {
+        const { platformBreakdown, ...rest } = data;
         return await prisma.analytics.create({
             data: {
-                ...data,
-                platformData: data.platformBreakdown || {}
+                ...rest,
+                platformData: platformBreakdown || {}
             }
         });
     }

@@ -1,8 +1,10 @@
+import { Server as SocketIOServer } from 'socket.io';
 import { getDatabase } from '../database';
 
 export class NotificationService {
     private static instance: NotificationService;
     private db = getDatabase();
+    private io: SocketIOServer | null = null;
 
     private constructor() { }
 
@@ -11,6 +13,10 @@ export class NotificationService {
             NotificationService.instance = new NotificationService();
         }
         return NotificationService.instance;
+    }
+
+    public setSocketServer(io: SocketIOServer) {
+        this.io = io;
     }
 
     async send(params: {
@@ -22,20 +28,24 @@ export class NotificationService {
     }) {
         try {
             // 1. Save to database for in-app notifications
-            // @ts-ignore
-            const notification = await this.db.prisma.notification.create({
+            const notification = await (this.db.prisma as any).notification.create({
                 data: params
             });
 
-            // 2. Logic for Email (SendGrid) - Placeholder
-            if (process.env.SENDGRID_API_KEY) {
-                console.log(`[Email] Sending to user ${params.userId}: ${params.title}`);
-                // Implementation would go here
+            // 2. Real-time broadcast if socket is connected
+            if (this.io) {
+                // Emit to specific user room if they are logged in
+                this.io.to(`user:${params.userId}`).emit('notification', notification);
+
+                // For critical security events, also log to console
+                if (params.type === 'security') {
+                    console.log(`[Security Alert] ${params.title}: ${params.message}`);
+                }
             }
 
-            // 3. Logic for Push (Firebase) - Placeholder
-            if (process.env.FIREBASE_CONFIG) {
-                console.log(`[Push] Sending to user ${params.userId}: ${params.title}`);
+            // 3. Logic for Email (SendGrid) - Placeholder
+            if (process.env.SENDGRID_API_KEY) {
+                console.log(`[Email] Sending to user ${params.userId}: ${params.title}`);
                 // Implementation would go here
             }
 

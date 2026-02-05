@@ -4,6 +4,7 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
+import bcrypt from 'bcryptjs';
 import swaggerUi from 'swagger-ui-express';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -14,6 +15,8 @@ import { getOpenAIService } from './services/openai';
 import { getStreamService } from './services/stream';
 import { getDatabase } from './services/database';
 import { getAuditService } from './services/enterprise/audit';
+import { getAIDirectorService } from './services/ai-director';
+import { getNotificationService } from './services/enterprise/notification';
 
 // Import modules
 import { swaggerSpec } from './swagger';
@@ -45,6 +48,11 @@ const openai = getOpenAIService();
 const streamService = getStreamService();
 const db = getDatabase();
 const audit = getAuditService();
+const aiDirector = getAIDirectorService();
+aiDirector.setSocketServer(io);
+
+const notificationService = getNotificationService();
+notificationService.setSocketServer(io);
 
 // Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -66,8 +74,54 @@ app.get('/api/health', async (req, res) => {
     });
 });
 
+// AI Director Test Trigger
+app.post('/api/test/director/event', async (req, res) => {
+    try {
+        const { type, data, streamId } = req.body;
+        await aiDirector.handleEvent({ type, data, streamId });
+        res.json({ success: true, message: `Event ${type} processed by AI Director` });
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
 // Enterprise Routes
 app.use('/api/enterprise', enterpriseRoutes);
+
+// --- Auth Routes ---
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+
+        // Basic check
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        const existingUser = await (db as any).prisma.user.findUnique({
+            where: { email }
+        });
+
+        if (existingUser) {
+            return res.status(400).json({ error: 'User already exists' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = await (db as any).prisma.user.create({
+            data: {
+                name,
+                email,
+                password: hashedPassword,
+                role: 'USER'
+            }
+        });
+
+        res.json({ success: true, user: { id: user.id, email: user.email } });
+    } catch (error) {
+        res.status(500).json({ error: 'Registration failed' });
+    }
+});
 
 // Temporary Test Endpoint
 app.post('/api/test/seed', async (req, res) => {
@@ -462,7 +516,7 @@ app.post('/api/guests/join/:code', async (req, res) => {
         }
 
         await db.updateGuestStatus(guest.id, 'connected');
-        io.to(`stream:${guest.streamId}`).emit('guest:joined', guest);
+        io.to(`stream:${guest.streamId} `).emit('guest:joined', guest);
 
         res.json({ success: true, guest });
     } catch (error) {
@@ -531,7 +585,7 @@ app.post('/api/scenes/:streamId/activate/:sceneId', async (req, res) => {
 // ============================================
 
 io.on('connection', (socket) => {
-    console.log(`Client connected: ${socket.id}`);
+    console.log(`Client connected: ${socket.id} `);
 
     // Join stream room
     socket.on('stream:join', (streamId: string) => {
@@ -568,6 +622,13 @@ io.on('connection', (socket) => {
         // Only broadcast if not moderated
         if (!moderation.flagged) {
             io.to(`stream:${streamId}`).emit('chat:message', chatMessage);
+
+            // Trigger AI Director analysis for chat-based events
+            aiDirector.handleEvent({
+                type: 'chat',
+                streamId,
+                data: { chatMessage: message, username }
+            }).catch(e => console.error('[AI Director] Chat handle error:', e));
         }
     });
 
@@ -634,7 +695,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log(`Client disconnected: ${socket.id}`);
+        console.log(`Client disconnected: ${socket.id} `);
     });
 });
 
@@ -658,6 +719,13 @@ setInterval(async () => {
             newFollowers: Math.floor(Math.random() * 5),
             platformBreakdown: {},
         });
+
+        // Periodic AI Director check
+        aiDirector.handleEvent({
+            type: 'analytics',
+            streamId: stream.id,
+            data: { viewers: currentViewers, chatRate: chatMessages / 5 } // approx per min
+        }).catch(e => console.error('[AI Director] Analytics handle error:', e));
     }
 }, 5000);
 
@@ -668,21 +736,21 @@ const PORT = process.env.PORT || 3001;
 
 httpServer.listen(PORT, () => {
     console.log(`
-  🚀 AI Avatar Livestream Server (Enterprise Edition)
-  ==================================================
-  Server:     http://localhost:${PORT}
-  WebSocket:  ws://localhost:${PORT}
-  Docs:       http://localhost:${PORT}/api-docs
+  🚀 AI Avatar Livestream Server(Enterprise Edition)
+    ==================================================
+    Server: http://localhost:${PORT}
+WebSocket: ws://localhost:${PORT}
+Docs: http://localhost:${PORT}/api-docs
   
   Services initialized:
-  - HeyGen Avatar Service
-  - ElevenLabs TTS Service  
-  - OpenAI AI Service
-  - Stream Service
-  - Database Service (Neon)
-  - Audit & Compliance Service
-  - Payment & Billing Service
-  `);
+- HeyGen Avatar Service
+    - ElevenLabs TTS Service
+        - OpenAI AI Service
+            - Stream Service
+                - Database Service(Neon)
+                    - Audit & Compliance Service
+                        - Payment & Billing Service
+                            `);
 });
 
 // Graceful shutdown

@@ -39,7 +39,9 @@ export function RealTimeAnalytics({ streamId, className }: RealTimeAnalyticsProp
         isStreaming,
         streamDuration,
         aiInsights,
-        directorLogs
+        directorLogs,
+        aiLatency,
+        aiConfidence
     } = useStudioStore();
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [previousViewers, setPreviousViewers] = useState(0);
@@ -135,6 +137,18 @@ export function RealTimeAnalytics({ streamId, className }: RealTimeAnalyticsProp
             icon: <UserPlus size={18} />,
             color: 'blue',
         },
+        {
+            label: 'AI Latency',
+            value: aiLatency > 0 ? `${aiLatency}ms` : '--',
+            icon: <Terminal size={18} />,
+            color: 'green',
+        },
+        {
+            label: 'AI Confidence',
+            value: aiConfidence > 0 ? `${(aiConfidence * 100).toFixed(0)}%` : '--',
+            icon: <Sparkles size={18} />,
+            color: 'gold',
+        },
     ];
 
     return (
@@ -169,7 +183,7 @@ export function RealTimeAnalytics({ streamId, className }: RealTimeAnalyticsProp
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 mb-5">
                 {stats.map((stat, index) => (
                     <motion.div
                         key={stat.label}
@@ -188,7 +202,9 @@ export function RealTimeAnalytics({ streamId, className }: RealTimeAnalyticsProp
                             {stat.icon}
                         </div>
                         <div className="flex items-end gap-1.5">
-                            <span className="text-xl font-bold">{formatNumber(stat.value)}</span>
+                            <span className="text-xl font-bold">
+                                {typeof stat.value === 'number' ? formatNumber(stat.value) : stat.value}
+                            </span>
                             {stat.trend && (
                                 <span className={cn(
                                     'text-xs flex items-center gap-0.5 mb-0.5',

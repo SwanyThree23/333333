@@ -239,6 +239,7 @@ export default function StudioPage() {
                     </div>
                 </main>
             </div>
+            <AIDirector />
         </div>
     );
 }

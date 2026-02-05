@@ -10,7 +10,7 @@ import { body, validationResult } from 'express-validator';
 // Use require for Prisma client to avoid ESM named-export resolution issues
 const { PrismaClient } = require('@prisma/client');
 import Redis from 'ioredis';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
@@ -116,7 +116,7 @@ app.post('/api/auth/register',
     body('email').isEmail(),
     body('username').isLength({ min: 3 }),
     body('password').isLength({ min: 8 }),
-    asyncHandler(async (req, res) => {
+    asyncHandler(async (req: any, res: any) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
@@ -137,7 +137,7 @@ app.post('/api/auth/register',
 app.post('/api/auth/login',
     body('email').isEmail(),
     body('password').isString(),
-    asyncHandler(async (req, res) => {
+    asyncHandler(async (req: any, res: any) => {
         const { email, password } = req.body;
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) return res.status(400).json({ error: 'Invalid credentials' });
@@ -152,7 +152,7 @@ app.post('/api/auth/login',
     })
 );
 
-app.post('/api/auth/refresh', asyncHandler(async (req, res) => {
+app.post('/api/auth/refresh', asyncHandler(async (req: any, res: any) => {
     const { refreshToken } = req.body;
     if (!refreshToken) return res.status(400).json({ error: 'Missing refreshToken' });
     const userId = await verifyRefreshToken(refreshToken);
@@ -162,7 +162,7 @@ app.post('/api/auth/refresh', asyncHandler(async (req, res) => {
 }));
 
 // Logout: invalidate refresh token
-app.post('/api/auth/logout', asyncHandler(async (req, res) => {
+app.post('/api/auth/logout', asyncHandler(async (req: any, res: any) => {
     const { refreshToken } = req.body;
     if (!refreshToken) return res.status(400).json({ error: 'Missing refreshToken' });
     await redis.del(`refresh:${refreshToken}`);
@@ -216,7 +216,7 @@ app.post('/api/streams/stop', jwtAuth, body('streamId').isString(), asyncHandler
     res.json({ success: true, streamId, endedAt, duration });
 }));
 
-app.get('/api/streams/:id/stats', asyncHandler(async (req, res) => {
+app.get('/api/streams/:id/stats', asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
     const analytics = await prisma.streamAnalytics.findUnique({ where: { streamId: id } });
     if (!analytics) return res.status(404).json({ error: 'Analytics not found' });
@@ -298,7 +298,7 @@ app.post('/api/chat/:streamId',
 );
 
 // Chat replay endpoint
-app.get('/api/streams/:id/chat', asyncHandler(async (req, res) => {
+app.get('/api/streams/:id/chat', asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
     const messages = await prisma.chatMessage.findMany({ where: { streamId: id }, orderBy: { timestamp: 'asc' } });
     res.json({ messages });
@@ -411,7 +411,7 @@ setInterval(async () => {
 }, 5000);
 
 // Health check
-app.get('/health', asyncHandler(async (req, res) => {
+app.get('/health', asyncHandler(async (req: any, res: any) => {
     // quick db ping
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ok' });

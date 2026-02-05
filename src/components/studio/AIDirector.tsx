@@ -11,20 +11,16 @@ export function AIDirector() {
         activeScene,
         scenes,
         setActiveScene,
-        chatMessages,
         isStreaming,
         addDirectorLog,
         setDirectorLogs,
         setAiInsights,
-        analytics,
+        setAiMetrics,
         stream
     } = useStudioStore();
 
     const streamId = stream?.id;
-    const { switchScene } = useSocket(streamId);
-
-    const lastSuggestionTime = useRef<number>(0);
-    const SUGGESTION_COOLDOWN = 60000; // 1 minute cooldown to avoid rapid switching
+    const { socket } = useSocket(streamId);
 
     // Load history on mount
     useEffect(() => {
@@ -45,77 +41,51 @@ export function AIDirector() {
             .catch(console.error);
     }, [streamId, setDirectorLogs]);
 
+    // Handle Socket Events from the backend Director
     useEffect(() => {
-        if (!aiDirectorEnabled || !isStreaming) return;
+        if (!socket || !streamId || !aiDirectorEnabled) return;
 
-        const checkForSceneChange = async () => {
-            const now = Date.now();
-            if (now - lastSuggestionTime.current < SUGGESTION_COOLDOWN) return;
+        const onSceneChange = (data: { sceneName: string, sceneId: string, reason: string, director: string }) => {
+            if (data.director === 'AI' || data.director === 'AI_RULE') {
+                const targetScene = scenes.find(s => s.id === data.sceneId || s.name === data.sceneName);
+                if (targetScene && targetScene.id !== activeScene?.id) {
+                    setActiveScene(targetScene);
 
-            try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/ai/suggest-scene`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        currentScene: activeScene?.name || 'none',
-                        chatHistory: chatMessages.slice(-20).map(m => `${m.username}: ${m.message}`),
-                        availableScenes: scenes.map(s => s.name)
-                    })
-                });
+                    toast.info(`AI Director: Switching to ${targetScene.name}`, {
+                        description: data.reason
+                    });
 
-                if (!response.ok) return;
-
-                const suggestion = await response.json();
-
-                if (suggestion && suggestion.confidence > 0.7) {
-                    const nextScene = scenes.find(s => s.name === suggestion.name);
-
-                    if (nextScene && nextScene.id !== activeScene?.id) {
-                        toast.info(`AI Director: Switching to ${nextScene.name}`, {
-                            description: suggestion.description
-                        });
-                        addDirectorLog({
-                            message: `Auto-switched to ${nextScene.name}: ${suggestion.description}`,
-                            type: 'success'
-                        });
-
-                        // Persist to backend
-                        if (streamId) {
-                            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/streams/${streamId}/director-events`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    type: 'success',
-                                    message: `Auto-switched to ${nextScene.name}: ${suggestion.description}`,
-                                    metadata: suggestion
-                                })
-                            }).catch(console.error);
-                        }
-
-                        // Use socket to switch scene (broadcasts to all clients)
-                        switchScene(nextScene.id);
-
-                        lastSuggestionTime.current = Date.now();
-                    }
+                    addDirectorLog({
+                        message: `Auto-switched to ${targetScene.name}: ${data.reason}`,
+                        type: 'success'
+                    });
                 }
-            } catch (error) {
-                console.error("AI Director failed to get suggestion:", error);
             }
         };
 
-        const fetchInsights = async () => {
-            if (!analytics?.viewerTimeline) return;
+        const onDirectorMetrics = (data: { latency: number, confidence: number, trigger: string }) => {
+            setAiMetrics(data.latency, data.confidence);
+        };
 
+        socket.on('scene_change', onSceneChange);
+        socket.on('director_metrics', onDirectorMetrics);
+
+        return () => {
+            socket.off('scene_change', onSceneChange);
+            socket.off('director_metrics', onDirectorMetrics);
+        };
+    }, [socket, streamId, aiDirectorEnabled, scenes, activeScene, setActiveScene, addDirectorLog, setAiMetrics]);
+
+    // Engagement analysis is still useful to poll occasionally for insights
+    useEffect(() => {
+        if (!aiDirectorEnabled || !isStreaming || !streamId) return;
+
+        const fetchInsights = async () => {
             try {
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/ai/analyze-engagement`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        streamId,
-                        viewerCount: analytics.viewerTimeline.map(t => t.count),
-                        chatActivity: [chatMessages.length],
-                        sceneChanges: []
-                    })
+                    body: JSON.stringify({ streamId })
                 });
 
                 if (response.ok) {
@@ -127,14 +97,11 @@ export function AIDirector() {
             }
         };
 
-        const interval = setInterval(checkForSceneChange, 30000);
         const insightInterval = setInterval(fetchInsights, 120000); // Every 2 mins
+        fetchInsights();
 
-        return () => {
-            clearInterval(interval);
-            clearInterval(insightInterval);
-        };
-    }, [aiDirectorEnabled, isStreaming, activeScene, scenes, chatMessages, setActiveScene, addDirectorLog, setAiInsights, analytics, streamId, switchScene]);
+        return () => clearInterval(insightInterval);
+    }, [aiDirectorEnabled, isStreaming, streamId, setAiInsights]);
 
-    return null; // Invisible manager component
+    return null;
 }

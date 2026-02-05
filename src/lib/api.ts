@@ -295,3 +295,14 @@ export const healthApi = {
             services: Record<string, unknown>;
         }>('/health'),
 };
+// ============================================
+// Auth API
+// ============================================
+
+export const authApi = {
+    register: (data: any) =>
+        apiCall<{ success: boolean; user: any }>('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
+};

@@ -247,7 +247,7 @@ export class StreamService {
         const stream = this.activeStreams.get(streamId);
         if (!stream) return 0;
 
-        return stream.platforms.reduce((sum, p) => sum + p.viewerCount, 0);
+        return stream.platforms?.reduce((sum, p) => sum + p.viewerCount, 0) || 0;
     }
 
     /**

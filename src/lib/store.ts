@@ -35,12 +35,15 @@ interface StudioState {
     aiDirectorEnabled: boolean;
     directorLogs: { id: string; timestamp: Date; message: string; type: 'info' | 'success' | 'warning' }[];
     aiInsights: string | null;
+    aiLatency: number;
+    aiConfidence: number;
 
     // Actions
     setAiDirectorEnabled: (enabled: boolean) => void;
     addDirectorLog: (log: { message: string; type: 'info' | 'success' | 'warning' }) => void;
     setDirectorLogs: (logs: { id: string; timestamp: Date; message: string; type: 'info' | 'success' | 'warning' }[]) => void;
     setAiInsights: (insights: string | null) => void;
+    setAiMetrics: (latency: number, confidence: number) => void;
     setStream: (stream: Stream | null) => void;
     startStream: () => void;
     stopStream: () => void;
@@ -98,6 +101,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     aiDirectorEnabled: false,
     directorLogs: [],
     aiInsights: null,
+    aiLatency: 0,
+    aiConfidence: 0,
 
     // Actions
     setAiDirectorEnabled: (enabled) => set({ aiDirectorEnabled: enabled }),
@@ -106,6 +111,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     })),
     setDirectorLogs: (logs) => set({ directorLogs: logs }),
     setAiInsights: (insights) => set({ aiInsights: insights }),
+    setAiMetrics: (latency, confidence) => set({ aiLatency: latency, aiConfidence: confidence }),
     setStream: (stream) => set({ stream }),
 
     startStream: () => set({

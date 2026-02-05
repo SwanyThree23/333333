@@ -267,7 +267,17 @@ export function ChatPanel({ streamId, className }: ChatPanelProps) {
                                         {/* Username & Platform */}
                                         <div className="flex items-center gap-1.5 mb-0.5">
                                             {getPlatformIcon(message.platform)}
-                                            <span className="text-xs font-semibold truncate">{message.username}</span>
+                                            <span className={cn(
+                                                "text-xs font-semibold truncate",
+                                                message.username === 'AI_DIRECTOR' ? "text-accent-gold" : "text-white"
+                                            )}>
+                                                {message.username === 'AI_DIRECTOR' ? 'Director' : message.username}
+                                            </span>
+                                            {message.username === 'AI_DIRECTOR' && (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-gold/20 text-accent-gold border border-accent-gold/30">
+                                                    SYSTEM
+                                                </span>
+                                            )}
                                             {message.badges?.map((badge) => (
                                                 <span
                                                     key={badge}

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudioStore } from '@/lib/store';
+import { toast } from 'sonner';
 import { avatarApi, aiApi, Avatar, Voice } from '@/lib/api';
 
 interface AIControlPanelProps {
@@ -552,6 +553,54 @@ export function AIControlPanel({ streamId, className }: AIControlPanelProps) {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Simulate Lab</h4>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/test/director/event`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    type: 'donation',
+                                                    data: { amount: 100, user: 'BigSpender' },
+                                                    streamId
+                                                })
+                                            });
+                                            toast.success('Simulation: $100 Donation Event Sent');
+                                        } catch (err) {
+                                            toast.error('Simulation failed');
+                                        }
+                                    }}
+                                    className="px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold hover:bg-green-500/20 transition-all"
+                                >
+                                    Simulate $100 Tip
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/test/director/event`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    type: 'chat',
+                                                    data: { message: 'Show us the code!' },
+                                                    streamId
+                                                })
+                                            });
+                                            toast.success('Simulation: Contextual Chat Sent');
+                                        } catch (err) {
+                                            toast.error('Simulation failed');
+                                        }
+                                    }}
+                                    className="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold hover:bg-blue-500/20 transition-all"
+                                >
+                                    Force Scene Analysis
+                                </button>
                             </div>
                         </div>
 

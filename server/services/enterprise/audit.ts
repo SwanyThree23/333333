@@ -4,7 +4,7 @@ export class AuditService {
     private static instance: AuditService;
     private db = getDatabase();
 
-    private constructor() {}
+    private constructor() { }
 
     public static getInstance(): AuditService {
         if (!AuditService.instance) {
@@ -33,6 +33,16 @@ export class AuditService {
         } catch (error) {
             console.error('Audit Log failed:', error);
         }
+    }
+
+    async getLogs(limit = 50, offset = 0) {
+        // @ts-ignore
+        return await this.db.prisma.auditLog.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            skip: offset,
+            include: { user: { select: { name: true, email: true } } }
+        });
     }
 }
 

@@ -18,8 +18,9 @@ import {
     LayoutGrid,
     Sparkles,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
 } from 'lucide-react';
+import Link from 'next/link';
 import { cn, formatDuration, formatNumber } from '@/lib/utils';
 import { useStudioStore } from '@/lib/store';
 
@@ -93,13 +94,23 @@ export function StudioHeader({ className }: HeaderProps) {
 
                 <div className="w-px h-8 bg-white/10 mx-2" />
 
-                <button
+                <Link
+                    href="/settings"
                     className="p-2.5 rounded-xl hover:bg-white/10 transition-colors"
-                    title="Studio Settings"
-                    aria-label="Studio Settings"
+                    title="Global Settings"
+                    aria-label="Global Settings"
                 >
                     <Settings size={20} className="text-gray-400" />
-                </button>
+                </Link>
+
+                <Link
+                    href="/profile"
+                    className="ml-2 w-10 h-10 rounded-full bg-surface-300 border border-white/10 flex items-center justify-center overflow-hidden hover:border-accent-gold transition-all"
+                    title="User Profile"
+                    aria-label="User Profile"
+                >
+                    <img src="https://i.pravatar.cc/150?u=studio" alt="Profile" className="w-full h-full object-cover" />
+                </Link>
             </div>
         </header>
     );

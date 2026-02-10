@@ -12,8 +12,7 @@ const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const compression_1 = __importDefault(require("compression"));
 const morgan_1 = __importDefault(require("morgan"));
 const express_validator_1 = require("express-validator");
-// Use require for Prisma client to avoid ESM named-export resolution issues
-const { PrismaClient } = require('@prisma/client');
+// Prisma client will be loaded lazily below; skip top-level require to allow degraded mode
 const ioredis_1 = __importDefault(require("ioredis"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -26,8 +25,20 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev_jwt_secret_change_me';
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 const AVATAR_CONTROLLER_URL = process.env.AVATAR_CONTROLLER_URL || 'http://localhost:8011';
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
-const prisma = new PrismaClient();
+let prisma = null;
+try {
+    const pkg = require('@prisma/client');
+    const { PrismaClient } = pkg;
+    prisma = new PrismaClient();
+}
+catch (e) {
+    console.warn('Prisma client not available, running in degraded mode:', e?.message || e);
+}
 const redis = new ioredis_1.default(REDIS_URL);
+// Handle redis connection errors to avoid unhandled exceptions
+redis.on('error', (err) => {
+    console.warn('[ioredis] connection error:', err?.message || err);
+});
 const stripe = new stripe_1.default(STRIPE_SECRET_KEY || '', { apiVersion: '2024-11-01' });
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
@@ -367,9 +378,19 @@ setInterval(async () => {
 }, 5000);
 // Health check
 app.get('/health', asyncHandler(async (req, res) => {
-    // quick db ping
-    await prisma.$queryRaw `SELECT 1`;
-    res.json({ status: 'ok' });
+    try {
+        if (prisma) {
+            // quick db ping
+            await prisma.$queryRaw `SELECT 1`;
+            res.json({ status: 'ok', db: 'connected' });
+        }
+        else {
+            res.json({ status: 'ok', db: 'degraded' });
+        }
+    }
+    catch (err) {
+        res.status(500).json({ status: 'error', error: String(err) });
+    }
 }));
 // Custom error handler
 app.use((err, req, res, next) => {

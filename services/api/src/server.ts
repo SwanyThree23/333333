@@ -7,8 +7,7 @@ import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import morgan from 'morgan';
 import { body, validationResult } from 'express-validator';
-// Use require for Prisma client to avoid ESM named-export resolution issues
-const { PrismaClient } = require('@prisma/client');
+// Prisma client will be loaded lazily below; skip top-level require to allow degraded mode
 import Redis from 'ioredis';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -23,8 +22,19 @@ const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 const AVATAR_CONTROLLER_URL = process.env.AVATAR_CONTROLLER_URL || 'http://localhost:8011';
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 
-const prisma = new PrismaClient();
+let prisma: any = null;
+try {
+    const pkg = require('@prisma/client');
+    const { PrismaClient } = pkg;
+    prisma = new PrismaClient();
+} catch (e) {
+    console.warn('Prisma client not available, running in degraded mode:', e?.message || e);
+}
 const redis = new Redis(REDIS_URL);
+// Handle redis connection errors to avoid unhandled exceptions
+redis.on('error', (err: any) => {
+    console.warn('[ioredis] connection error:', err?.message || err);
+});
 const stripe = new Stripe(STRIPE_SECRET_KEY || '', { apiVersion: '2024-11-01' } as any);
 
 const app = express();
@@ -411,10 +421,25 @@ setInterval(async () => {
 }, 5000);
 
 // Health check
+<<<<<<< HEAD
 app.get('/health', asyncHandler(async (req: any, res: any) => {
     // quick db ping
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ok' });
+=======
+app.get('/health', asyncHandler(async (req, res) => {
+    try {
+        if (prisma) {
+            // quick db ping
+            await prisma.$queryRaw`SELECT 1`;
+            res.json({ status: 'ok', db: 'connected' });
+        } else {
+            res.json({ status: 'ok', db: 'degraded' });
+        }
+    } catch (err) {
+        res.status(500).json({ status: 'error', error: String(err) });
+    }
+>>>>>>> 2ed69e2f28686e48032e752032996157196dba87
 }));
 
 // Custom error handler

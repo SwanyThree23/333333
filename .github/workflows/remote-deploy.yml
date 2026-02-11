@@ -1,0 +1,46 @@
+name: Remote Deploy via SSH
+
+on:
+    workflow_dispatch:
+        inputs:
+            host:
+                description: "Target host (IP or hostname)"
+                required: false
+            user:
+                description: "SSH user"
+                required: false
+            compose_path:
+                description: "Path to docker-compose.yml on remote host"
+                required: false
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Validate inputs
+              run: |
+                  echo "Host: ${{ github.event.inputs.host || 'from secret SSH_HOST' }}"
+                  echo "User: ${{ github.event.inputs.user || 'from secret SSH_USER' }}"
+
+            - name: SSH and deploy
+              uses: appleboy/ssh-action@v0.1.8
+              with:
+                  host: ${{ github.event.inputs.host || secrets.SSH_HOST }}
+                  username: ${{ github.event.inputs.user || secrets.SSH_USER }}
+                  key: ${{ secrets.SSH_KEY }}
+                  port: ${{ secrets.SSH_PORT || '22' }}
+                  script: |
+                      set -e
+                      echo "Logged into $(whoami)@$(hostname)"
+                      # Optional: login to GHCR if PAT provided
+                      if [ -n "${{ secrets.GHCR_PAT }}" ]; then
+                        echo "Logging into GHCR"
+                        echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin || true
+                      fi
+                      COMPOSE_PATH="${{ github.event.inputs.compose_path || secrets.DEPLOY_COMPOSE_PATH || '/home/${{ github.event.inputs.user || secrets.SSH_USER }}/docker-compose.deploy.yml' }}"
+                      echo "Using compose file: $COMPOSE_PATH"
+                      docker-compose -f "$COMPOSE_PATH" pull || true
+                      docker-compose -f "$COMPOSE_PATH" up -d --remove-orphans
+
+            - name: Notify
+              run: echo "Deployment commands executed on remote host"

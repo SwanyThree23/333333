@@ -1,0 +1,64 @@
+// Prisma schema for CY Live (scaffolded copy — do not replace existing prisma/schema.prisma)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String   @id @default(uuid())
+  username                String   @unique @db.VarChar(30)
+  email                   String   @unique @db.VarChar(255)
+  passwordHash            String   @db.VarChar(255)
+  displayName             String?  @db.VarChar(100)
+  bio                     String?
+  avatarUrl               String?  @db.VarChar(500)
+  verificationStatus      Int      @default(0)
+  accountType             Int      @default(0)
+  paypalHandle            String?  @db.VarChar(100)
+  cashappHandle           String?  @db.VarChar(100)
+  venmoHandle             String?  @db.VarChar(100)
+  zelleHandle             String?  @db.VarChar(100)
+  chimeHandle             String?  @db.VarChar(100)
+  instagramStreamKey      String?  @db.VarChar(255)
+  tiktokStreamKey         String?  @db.VarChar(255)
+  facebookStreamKey       String?  @db.VarChar(255)
+  youtubeStreamKey        String?  @db.VarChar(255)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  lastLogin               DateTime?
+  isActive                Boolean  @default(true)
+  isBanned                Boolean  @default(false)
+  streams                 Stream[]
+}
+
+model Category {
+  id      String   @id @default(uuid())
+  name    String   @unique
+  streams Stream[]
+}
+
+model Stream {
+  id                      String   @id @default(uuid())
+  hostId                  String
+  host                    User     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  title                   String   @db.VarChar(200)
+  description             String?
+  categoryId              String?
+  category                Category? @relation(fields: [categoryId], references: [id])
+  status                  String   @default("Scheduled")
+  visibility              String   @default("Public")
+  scheduledStart          DateTime?
+  actualStart             DateTime?
+  endedAt                 DateTime?
+  maxViewers              Int      @default(0)
+  currentViewers          Int      @default(0)
+  totalViews              Int      @default(0)
+  streamingToInstagram    Boolean  @default(false)
+  streamingToTiktok       Boolean  @default(false)
+  streamingToFacebook     Boolean  @default(false)
+  streamingToYoutube      Boolean  @default(false)
+}

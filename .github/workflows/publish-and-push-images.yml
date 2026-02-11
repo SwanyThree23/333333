@@ -1,0 +1,78 @@
+name: Publish and Push Docker images
+
+on:
+    workflow_dispatch:
+    push:
+        branches: [main]
+
+jobs:
+    build-and-push:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+            id-token: write
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up QEMU
+              uses: docker/setup-qemu-action@v2
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v2
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v2
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Build and push API image
+              uses: docker/build-push-action@v4
+              with:
+                  context: ./services/api
+                  file: ./services/api/Dockerfile
+                  push: true
+                  tags: |
+                      ghcr.io/${{ github.repository_owner }}/swanythree-api:latest
+                      ghcr.io/${{ github.repository_owner }}/swanythree-api:${{ github.sha }}
+
+            - name: Build and push Avatar Controller image
+              uses: docker/build-push-action@v4
+              with:
+                  context: ./services/avatar-controller
+                  file: ./services/avatar-controller/Dockerfile
+                  push: true
+                  tags: |
+                      ghcr.io/${{ github.repository_owner }}/swanythree-avatar:latest
+                      ghcr.io/${{ github.repository_owner }}/swanythree-avatar:${{ github.sha }}
+
+            - name: Build and push NGINX-RTMP image
+              uses: docker/build-push-action@v4
+              with:
+                  context: ./services/nginx-rtmp
+                  file: ./services/nginx-rtmp/Dockerfile
+                  push: true
+                  tags: |
+                      ghcr.io/${{ github.repository_owner }}/swanythree-nginx-rtmp:latest
+                      ghcr.io/${{ github.repository_owner }}/swanythree-nginx-rtmp:${{ github.sha }}
+
+            - name: Build and push Dashboard image
+              uses: docker/build-push-action@v4
+              with:
+                  context: ./services/dashboard
+                  file: ./services/dashboard/Dockerfile
+                  push: true
+                  tags: |
+                      ghcr.io/${{ github.repository_owner }}/swanythree-dashboard:latest
+                      ghcr.io/${{ github.repository_owner }}/swanythree-dashboard:${{ github.sha }}
+
+            - name: Output image names
+              run: |
+                  echo "API image: ghcr.io/${{ github.repository_owner }}/swanythree-api:latest"
+                  echo "Avatar image: ghcr.io/${{ github.repository_owner }}/swanythree-avatar:latest"
+                  echo "NGINX image: ghcr.io/${{ github.repository_owner }}/swanythree-nginx-rtmp:latest"
+                  echo "Dashboard image: ghcr.io/${{ github.repository_owner }}/swanythree-dashboard:latest"

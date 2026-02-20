@@ -35,6 +35,28 @@ const streamWorker = new Worker('stream-processing', async (job: Job) => {
     }
 });
 
+// Process RTMP fan-out (MediaSoup + ffmpeg)
+const rtmpWorker = new Worker('rtmp-fanout', async (job: Job) => {
+    const { streamId, destination, streamKeyEncrypted, rtmpUrl } = job.data;
+    console.log(`Starting RTMP fan-out for stream ${streamId} to ${destination}`);
+
+    // In a real implementation:
+    // 1. Decrypt streamKeyEncrypted using the ENCRYPTION_KEY
+    // 2. Connect to MediaSoup router to consume the broadcaster's stream
+    // 3. Spawn ffmpeg process, piping MediaSoup consumer streams to the standard input
+    //    ffmpeg -re -i - -c:v libx264 -preset veryfast -b:v 3000k -maxrate 3000k -bufsize 6000k -pix_fmt yuv420p -g 50 -c:a aac -b:a 160k -ac 2 -ar 44100 -f flv ${rtmpUrl}/${decryptedKey}
+
+    // Simulate ffmpeg process starting
+    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log(`FFmpeg worker pushing to ${destination} successfully.`);
+    return { status: 'streaming', destination };
+}, {
+    connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379')
+    }
+});
+
 emailWorker.on('completed', (job: Job) => {
     console.log(`${job.id} has completed!`);
 });

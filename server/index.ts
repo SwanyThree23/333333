@@ -143,7 +143,7 @@ app.post('/api/decrypt', (req, res) => {
 // Enterprise Routes
 app.use('/api/enterprise', enterpriseRoutes);
 
-// --- Auth Routes ---
+// --- Auth & User Routes ---
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -175,6 +175,51 @@ app.post('/api/auth/register', async (req, res) => {
         res.json({ success: true, user: { id: user.id, email: user.email } });
     } catch (error) {
         res.status(500).json({ error: 'Registration failed' });
+    }
+});
+
+app.put('/api/users/:id/profile', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            name, bio, image,
+            paypalHandle, cashappHandle, venmoHandle, zelleHandle, chimeHandle,
+            instagramStreamKey, tiktokStreamKey, facebookStreamKey, youtubeStreamKey
+        } = req.body;
+
+        const updateData: any = {};
+        if (name !== undefined) updateData.name = name;
+        if (bio !== undefined) updateData.bio = bio;
+        if (image !== undefined) updateData.image = image;
+
+        if (paypalHandle !== undefined) updateData.paypalHandle = paypalHandle;
+        if (cashappHandle !== undefined) updateData.cashappHandle = cashappHandle;
+        if (venmoHandle !== undefined) updateData.venmoHandle = venmoHandle;
+        if (zelleHandle !== undefined) updateData.zelleHandle = zelleHandle;
+        if (chimeHandle !== undefined) updateData.chimeHandle = chimeHandle;
+
+        if (instagramStreamKey) updateData.instagramStreamKey = encrypt(instagramStreamKey);
+        if (tiktokStreamKey) updateData.tiktokStreamKey = encrypt(tiktokStreamKey);
+        if (facebookStreamKey) updateData.facebookStreamKey = encrypt(facebookStreamKey);
+        if (youtubeStreamKey) updateData.youtubeStreamKey = encrypt(youtubeStreamKey);
+
+        const user = await (db as any).prisma.user.update({
+            where: { id },
+            data: updateData
+        });
+
+        // Safe return (no stream keys sent back)
+        const safeUser = { ...user };
+        delete safeUser.password;
+        delete safeUser.instagramStreamKey;
+        delete safeUser.tiktokStreamKey;
+        delete safeUser.facebookStreamKey;
+        delete safeUser.youtubeStreamKey;
+
+        res.json({ success: true, user: safeUser });
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
     }
 });
 

@@ -22,8 +22,8 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/server ./server
 COPY --from=build /app/package.json ./package.json
 
-# Copy public if exists (optional but recommended for Next.js)
-COPY --from=build /app/public ./public 2>/dev/null || :
+# Copy public folder
+COPY --from=build /app/public ./public/
 
 # Set ownership
 RUN chown -R node:node /app

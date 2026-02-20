@@ -16,6 +16,15 @@ export interface Platform {
     lastError?: string;
 }
 
+import { Queue } from 'bullmq';
+
+const rtmpQueue = new Queue('rtmp-fanout', {
+    connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379')
+    }
+});
+
 export interface StreamConfig {
     id: string;
     title: string;

@@ -27,7 +27,7 @@ try {
     const pkg = require('@prisma/client');
     const { PrismaClient } = pkg;
     prisma = new PrismaClient();
-} catch (e) {
+} catch (e: any) {
     console.warn('Prisma client not available, running in degraded mode:', e?.message || e);
 }
 const redis = new Redis(REDIS_URL);

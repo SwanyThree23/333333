@@ -83,8 +83,8 @@ export class AIDirectorService {
             const chatMessages = dbMessages.map(m => m.message);
 
             const scenes = await this.db.getScenesByStreamId(streamId);
-            const availableScenes = scenes.map(s => s.name);
-            const activeSceneObj = scenes.find(s => s.isActive);
+            const availableScenes = scenes.map((s: any) => s.name);
+            const activeSceneObj = scenes.find((s: any) => s.isActive);
             const currentScene = activeSceneObj ? activeSceneObj.name : 'Unknown';
 
             if (availableScenes.length === 0) {
@@ -115,7 +115,7 @@ export class AIDirectorService {
                 this.lastDecisionTime.set(streamId, Date.now());
 
                 // Find the scene ID for the suggested scene
-                const targetScene = scenes.find(s => s.name === suggestion.name);
+                const targetScene = scenes.find((s: any) => s.name === suggestion.name);
 
                 if (targetScene && this.io) {
                     // Update DB state

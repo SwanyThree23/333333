@@ -20,8 +20,9 @@ RUN npm run build
 FROM node:22-bookworm-slim AS production
 WORKDIR /app
 
-# Ensure production image is also patched
+# Ensure production image is patched and has FFmpeg for stream fan-out
 RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y ffmpeg && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

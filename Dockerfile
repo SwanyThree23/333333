@@ -13,11 +13,23 @@ RUN npm run build
 # Production stage
 FROM node:22-bookworm-slim AS production
 WORKDIR /app
+
+ENV NODE_ENV=production
+
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/server ./server
 COPY --from=build /app/package.json ./package.json
+
+# Copy public if exists (optional but recommended for Next.js)
+COPY --from=build /app/public ./public 2>/dev/null || :
+
+# Set ownership
+RUN chown -R node:node /app
+
+# Switch to non-root user
+USER node
 
 EXPOSE 3001
 CMD ["npm", "run", "server"]

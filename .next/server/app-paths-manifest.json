@@ -1,14 +1,1 @@
-{
-  "/_not-found/page": "app/_not-found/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/guest/join/[code]/page": "app/guest/join/[code]/page.js",
-  "/page": "app/page.js",
-  "/overlay/[id]/page": "app/overlay/[id]/page.js",
-  "/profile/page": "app/profile/page.js",
-  "/auth/signin/page": "app/auth/signin/page.js",
-  "/settings/page": "app/settings/page.js",
-  "/studio/page": "app/studio/page.js",
-  "/watch/[id]/page": "app/watch/[id]/page.js",
-  "/auth/register/page": "app/auth/register/page.js",
-  "/embed/[id]/page": "app/embed/[id]/page.js"
-}
+{}

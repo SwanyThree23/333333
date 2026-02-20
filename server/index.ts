@@ -117,7 +117,7 @@ app.post('/api/test/director/event', async (req: Request, res: Response) => {
 });
 
 // --- Encryption API ---
-app.post('/api/encrypt', (req, res) => {
+app.post('/api/encrypt', (req: Request, res: Response) => {
     const { value } = req.body;
     if (!value) return res.status(400).json({ error: 'value required' });
     try {
@@ -128,7 +128,7 @@ app.post('/api/encrypt', (req, res) => {
     }
 });
 
-app.post('/api/decrypt', (req, res) => {
+app.post('/api/decrypt', (req: Request, res: Response) => {
     const { payload } = req.body;
     if (!payload) return res.status(400).json({ error: 'payload required' });
     try {
@@ -698,7 +698,7 @@ io.on('connection', (socket) => {
     });
 
     // Chat message
-    socket.on('chat:message', async (data) => {
+    socket.on('chat:message', async (data: any) => {
         const { streamId, platform, username, message, donation } = data;
 
         // Moderate message
@@ -732,14 +732,14 @@ io.on('connection', (socket) => {
     });
 
     // Scene switch request
-    socket.on('scene:switch', async (data) => {
+    socket.on('scene:switch', async (data: any) => {
         const { streamId, sceneId } = data;
         await db.setActiveScene(streamId, sceneId);
         io.to(`stream:${streamId}`).emit('scene:switched', { sceneId });
     });
 
     // Avatar speak request
-    socket.on('avatar:speak', async (data) => {
+    socket.on('avatar:speak', async (data: any) => {
         const { streamId, text, avatarId } = data;
         const session = await db.getAvatarSession(streamId);
 
@@ -762,20 +762,20 @@ io.on('connection', (socket) => {
 
     // --- Guest WebRTC Signaling ---
     // Guest joins signaling (sending offer to broadcaster)
-    socket.on('guest:signal:offer', (data) => {
+    socket.on('guest:signal:offer', (data: any) => {
         const { streamId, offer, guestId } = data;
         // Forward offer to the broadcaster (who is in the stream room)
         io.to(`stream:${streamId}`).emit('guest:signal:offer', { offer, guestId, socketId: socket.id });
     });
 
     // Broadcaster sends answer to guest
-    socket.on('guest:signal:answer', (data) => {
+    socket.on('guest:signal:answer', (data: any) => {
         const { targetSocketId, answer, guestId } = data;
         io.to(targetSocketId).emit('guest:signal:answer', { answer, guestId });
     });
 
     // ICE Candidate exchange
-    socket.on('guest:signal:ice', (data) => {
+    socket.on('guest:signal:ice', (data: any) => {
         const { streamId, candidate, guestId, targetSocketId } = data;
         if (targetSocketId) {
             // Forward to specific client
@@ -787,7 +787,7 @@ io.on('connection', (socket) => {
     });
 
     // Viewer count simulation (for development)
-    socket.on('simulate:viewers', (data) => {
+    socket.on('viewer:simulate', (data: any) => {
         const { streamId, count } = data;
         streamService.updateViewerCount(streamId, 'mock-platform', count);
         io.to(`stream:${streamId}`).emit('stream:viewers', { count });

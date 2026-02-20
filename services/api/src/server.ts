@@ -421,13 +421,7 @@ setInterval(async () => {
 }, 5000);
 
 // Health check
-<<<<<<< HEAD
 app.get('/health', asyncHandler(async (req: any, res: any) => {
-    // quick db ping
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok' });
-=======
-app.get('/health', asyncHandler(async (req, res) => {
     try {
         if (prisma) {
             // quick db ping
@@ -439,7 +433,6 @@ app.get('/health', asyncHandler(async (req, res) => {
     } catch (err) {
         res.status(500).json({ status: 'error', error: String(err) });
     }
->>>>>>> 2ed69e2f28686e48032e752032996157196dba87
 }));
 
 // Custom error handler

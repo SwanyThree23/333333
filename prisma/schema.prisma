@@ -58,6 +58,16 @@ model User {
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  paypalHandle      String?   @db.VarChar(100)
+  cashappHandle     String?   @db.VarChar(100)
+  venmoHandle       String?   @db.VarChar(100)
+  zelleHandle       String?   @db.VarChar(100)
+  chimeHandle       String?   @db.VarChar(100)
+  instagramStreamKey String?  @db.VarChar(255)
+  tiktokStreamKey   String?   @db.VarChar(255)
+  facebookStreamKey String?   @db.VarChar(255)
+  youtubeStreamKey  String?   @db.VarChar(255)
 }
 
 enum UserRole {
@@ -102,6 +112,11 @@ model Stream {
   endedAt     DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  streamingToInstagram    Boolean  @default(false)
+  streamingToTiktok       Boolean  @default(false)
+  streamingToFacebook     Boolean  @default(false)
+  streamingToYoutube      Boolean  @default(false)
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   platforms      Platform[]

@@ -5,7 +5,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface StreamEvent {
-    type: 'chat' | 'donation' | 'viewer_milestone' | 'engagement_drop';
+    type: 'chat' | 'donation' | 'viewer_milestone' | 'engagement_drop' | 'analytics';
     data: any;
     streamId: string;
 }

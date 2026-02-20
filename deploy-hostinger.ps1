@@ -14,7 +14,7 @@ Write-Host "📦 Packaging project files into $ArchiveName..." -ForegroundColor 
 if (Test-Path $ArchiveName) { Remove-Item $ArchiveName -Force }
 
 # Exclude node_modules, .git, and .next to save bandwidth and time
-Compress-Archive -Path "src", "public", "prisma", "server", "package.json", "package-lock.json", "tsconfig.json", "tailwind.config.ts", "postcss.config.mjs", "next.config.mjs", "docker-compose.yml", ".env" -DestinationPath $ArchiveName -Force
+Compress-Archive -Path "src", "public", "prisma", "server", "package.json", "package-lock.json", "tsconfig.json", "tailwind.config.ts", "postcss.config.js", "next.config.js", "docker-compose.yml", "docker-compose.prod.yml", ".env" -DestinationPath $ArchiveName -Force
 
 # 2. Upload to Hostinger via SCP
 Write-Host "☁️ Uploading $ArchiveName to ${HostingerUser}@${HostingerIP}:${RemoteDir}..." -ForegroundColor Yellow

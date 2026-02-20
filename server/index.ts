@@ -1,5 +1,4 @@
-import 'dotenv/config';
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
@@ -94,7 +93,7 @@ function decrypt(payloadB64: string) {
 // ============================================
 
 // Health check
-app.get('/api/health', async (req, res) => {
+app.get('/api/health', async (req: Request, res: Response) => {
     res.json({
         status: 'ok',
         version: '1.0.0-enterprise',
@@ -107,7 +106,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // AI Director Test Trigger
-app.post('/api/test/director/event', async (req, res) => {
+app.post('/api/test/director/event', async (req: Request, res: Response) => {
     try {
         const { type, data, streamId } = req.body;
         await aiDirector.handleEvent({ type, data, streamId });
@@ -144,7 +143,7 @@ app.post('/api/decrypt', (req, res) => {
 app.use('/api/enterprise', enterpriseRoutes);
 
 // --- Auth & User Routes ---
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', async (req: Request, res: Response) => {
     try {
         const { name, email, password } = req.body;
 
@@ -178,7 +177,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
-app.put('/api/users/:id/profile', async (req, res) => {
+app.put('/api/users/:id/profile', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const {
@@ -224,7 +223,7 @@ app.put('/api/users/:id/profile', async (req, res) => {
 });
 
 // Temporary Test Endpoint
-app.post('/api/test/seed', async (req, res) => {
+app.post('/api/test/seed', async (req: Request, res: Response) => {
     try {
         // Create admin user
         const admin = await (db as any).prisma.user.upsert({
@@ -281,7 +280,7 @@ app.post('/api/test/seed', async (req, res) => {
 });
 
 // ---- Stream Routes ----
-app.post('/api/streams', async (req, res) => {
+app.post('/api/streams', async (req: Request, res: Response) => {
     try {
         const { userId, title, description, platforms, quality } = req.body;
 
@@ -340,7 +339,7 @@ app.post('/api/streams', async (req, res) => {
     }
 });
 
-app.get('/api/streams/:id', async (req, res) => {
+app.get('/api/streams/:id', async (req: Request, res: Response) => {
     const stream = await db.getStreamById(req.params.id);
     if (!stream) {
         return res.status(404).json({ error: 'Stream not found' });
@@ -348,7 +347,7 @@ app.get('/api/streams/:id', async (req, res) => {
     res.json(stream);
 });
 
-app.get('/api/streams/user/:userId', async (req, res) => {
+app.get('/api/streams/user/:userId', async (req: Request, res: Response) => {
     try {
         const streams = await db.getStreamsByUserId(req.params.userId);
         res.json(streams);
@@ -357,7 +356,7 @@ app.get('/api/streams/user/:userId', async (req, res) => {
     }
 });
 
-app.post('/api/streams/:id/start', async (req, res) => {
+app.post('/api/streams/:id/start', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const result = await streamService.startStream(id);
@@ -373,7 +372,7 @@ app.post('/api/streams/:id/start', async (req, res) => {
     }
 });
 
-app.post('/api/streams/:id/stop', async (req, res) => {
+app.post('/api/streams/:id/stop', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         await streamService.stopStream(id);
@@ -386,12 +385,12 @@ app.post('/api/streams/:id/stop', async (req, res) => {
 });
 
 // ---- Avatar Routes ----
-app.get('/api/avatars', async (req, res) => {
+app.get('/api/avatars', async (req: Request, res: Response) => {
     const avatars = await heygen.listAvatars();
     res.json(avatars);
 });
 
-app.get('/api/voices', async (req, res) => {
+app.get('/api/voices', async (req: Request, res: Response) => {
     const [heygenVoices, elevenLabsVoices] = await Promise.all([
         heygen.listVoices(),
         elevenlabs.listVoices(),
@@ -402,7 +401,7 @@ app.get('/api/voices', async (req, res) => {
     });
 });
 
-app.post('/api/avatar/session', async (req, res) => {
+app.post('/api/avatar/session', async (req: Request, res: Response) => {
     try {
         const { avatarId, streamId } = req.body;
         const session = await heygen.createStreamingSession(avatarId);
@@ -422,7 +421,7 @@ app.post('/api/avatar/session', async (req, res) => {
     }
 });
 
-app.post('/api/avatar/session/start', async (req, res) => {
+app.post('/api/avatar/session/start', async (req: Request, res: Response) => {
     try {
         const { sessionId, sdpAnswer } = req.body;
         await heygen.startStreamingSession(sessionId, sdpAnswer);
@@ -432,7 +431,7 @@ app.post('/api/avatar/session/start', async (req, res) => {
     }
 });
 
-app.post('/api/avatar/speak', async (req, res) => {
+app.post('/api/avatar/speak', async (req: Request, res: Response) => {
     try {
         const { sessionId, streamId, text, voiceId, useElevenLabs } = req.body;
 
@@ -469,7 +468,7 @@ app.post('/api/avatar/speak', async (req, res) => {
     }
 });
 
-app.post('/api/avatar/stop', async (req, res) => {
+app.post('/api/avatar/stop', async (req: Request, res: Response) => {
     try {
         const { sessionId, streamId } = req.body;
         await heygen.stopTalk(sessionId);
@@ -487,7 +486,7 @@ app.post('/api/avatar/stop', async (req, res) => {
 });
 
 // ---- AI Features Routes ----
-app.post('/api/ai/moderate', async (req, res) => {
+app.post('/api/ai/moderate', async (req: Request, res: Response) => {
     try {
         const { text } = req.body;
         const result = await openai.moderateContent(text);
@@ -497,7 +496,7 @@ app.post('/api/ai/moderate', async (req, res) => {
     }
 });
 
-app.post('/api/ai/generate-script', async (req, res) => {
+app.post('/api/ai/generate-script', async (req: Request, res: Response) => {
     try {
         const { topic, style, duration } = req.body;
         const script = await openai.generateScript(topic, style, duration);
@@ -507,7 +506,7 @@ app.post('/api/ai/generate-script', async (req, res) => {
     }
 });
 
-app.post('/api/ai/suggest-scene', async (req, res) => {
+app.post('/api/ai/suggest-scene', async (req: Request, res: Response) => {
     try {
         const { currentScene, chatHistory, availableScenes } = req.body;
         const suggestion = await openai.suggestSceneChange(currentScene, chatHistory, availableScenes);
@@ -517,7 +516,7 @@ app.post('/api/ai/suggest-scene', async (req, res) => {
     }
 });
 
-app.post('/api/ai/chat-response', async (req, res) => {
+app.post('/api/ai/chat-response', async (req: Request, res: Response) => {
     try {
         const { question, streamTopic, previousResponses } = req.body;
         const response = await openai.generateChatResponse(question, {
@@ -530,7 +529,7 @@ app.post('/api/ai/chat-response', async (req, res) => {
     }
 });
 
-app.post('/api/ai/analyze-engagement', async (req, res) => {
+app.post('/api/ai/analyze-engagement', async (req: Request, res: Response) => {
     try {
         const { streamId, viewerCount, chatActivity, sceneChanges } = req.body;
         const insights = await openai.analyzeEngagement(viewerCount, chatActivity, sceneChanges);
@@ -545,7 +544,7 @@ app.post('/api/ai/analyze-engagement', async (req, res) => {
     }
 });
 
-app.get('/api/streams/:streamId/director-events', async (req, res) => {
+app.get('/api/streams/:streamId/director-events', async (req: Request, res: Response) => {
     try {
         const events = await db.getDirectorEvents(req.params.streamId);
         res.json(events);
@@ -554,7 +553,7 @@ app.get('/api/streams/:streamId/director-events', async (req, res) => {
     }
 });
 
-app.post('/api/streams/:streamId/config', async (req, res) => {
+app.post('/api/streams/:streamId/config', async (req: Request, res: Response) => {
     try {
         const { aiDirectorEnabled } = req.body;
         await db.updateStreamConfig(req.params.streamId, { aiDirectorEnabled });
@@ -564,7 +563,7 @@ app.post('/api/streams/:streamId/config', async (req, res) => {
     }
 });
 
-app.post('/api/streams/:streamId/director-events', async (req, res) => {
+app.post('/api/streams/:streamId/director-events', async (req: Request, res: Response) => {
     try {
         const { type, message, metadata } = req.body;
         const event = await db.recordDirectorEvent({
@@ -580,7 +579,7 @@ app.post('/api/streams/:streamId/director-events', async (req, res) => {
     }
 });
 
-app.post('/api/ai/generate-metadata', async (req, res) => {
+app.post('/api/ai/generate-metadata', async (req: Request, res: Response) => {
     try {
         const { title, topic } = req.body;
         const metadata = await openai.generateStreamMetadata(title, topic);
@@ -591,7 +590,7 @@ app.post('/api/ai/generate-metadata', async (req, res) => {
 });
 
 // ---- Guest Routes ----
-app.post('/api/guests', async (req, res) => {
+app.post('/api/guests', async (req: Request, res: Response) => {
     try {
         const { streamId, name, email } = req.body;
         const guest = await db.createGuest({ streamId, name, email, status: 'invited' });
@@ -603,12 +602,12 @@ app.post('/api/guests', async (req, res) => {
     }
 });
 
-app.get('/api/guests/:streamId', async (req, res) => {
+app.get('/api/guests/:streamId', async (req: Request, res: Response) => {
     const guests = await db.getGuestsByStreamId(req.params.streamId);
     res.json(guests);
 });
 
-app.post('/api/guests/join/:code', async (req, res) => {
+app.post('/api/guests/join/:code', async (req: Request, res: Response) => {
     try {
         const guest = await db.getGuestByInviteCode(req.params.code);
         if (!guest) {
@@ -625,7 +624,7 @@ app.post('/api/guests/join/:code', async (req, res) => {
 });
 
 // ---- Analytics Routes ----
-app.get('/api/analytics/:streamId', async (req, res) => {
+app.get('/api/analytics/:streamId', async (req: Request, res: Response) => {
     try {
         const { streamId } = req.params;
         const stream = streamService.getStream(streamId);
@@ -644,12 +643,12 @@ app.get('/api/analytics/:streamId', async (req, res) => {
 });
 
 // ---- Scene Routes ----
-app.get('/api/scenes/:streamId', async (req, res) => {
+app.get('/api/scenes/:streamId', async (req: Request, res: Response) => {
     const scenes = await db.getScenesByStreamId(req.params.streamId);
     res.json(scenes);
 });
 
-app.post('/api/scenes', async (req, res) => {
+app.post('/api/scenes', async (req: Request, res: Response) => {
     try {
         const { streamId, name, layout, sources, order } = req.body;
         const scene = await db.createScene({
@@ -668,7 +667,7 @@ app.post('/api/scenes', async (req, res) => {
     }
 });
 
-app.post('/api/scenes/:streamId/activate/:sceneId', async (req, res) => {
+app.post('/api/scenes/:streamId/activate/:sceneId', async (req: Request, res: Response) => {
     try {
         const { streamId, sceneId } = req.params;
         await db.setActiveScene(streamId, sceneId);

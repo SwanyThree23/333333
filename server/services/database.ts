@@ -3,8 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 
-const connectionString = "postgresql://neondb_owner:npg_SqF9QZ5GVybz@ep-rough-term-afegxq9v-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require";
-console.log('[Database] Connecting via pg:', connectionString.replace(/:[^:@]+@/, ':***@'));
+const connectionString = process.env.DATABASE_URL || "postgresql://neondb_owner:***@ep-rough-term-afegxq9v-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require";
+console.log('[Database] Connecting via env variable...');
 
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);

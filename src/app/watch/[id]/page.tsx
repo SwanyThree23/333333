@@ -4,6 +4,9 @@ import { motion } from 'framer-motion';
 import { useParams } from 'next/navigation';
 import { Radio, Users, MessageSquare, Share2, Heart, Shield, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import GoldBoardGrid from '@/components/GoldBoardGrid';
+import HostTile from '@/components/HostTile';
+import { ExternalLink, DollarSign, Wallet } from 'lucide-react';
 
 export default function WatchPage() {
     const { id } = useParams();
@@ -23,41 +26,49 @@ export default function WatchPage() {
             <div className="flex-1 flex flex-col lg:flex-row h-full">
                 {/* Main Player Area */}
                 <div className="flex-1 flex flex-col p-4 lg:p-6 overflow-y-auto custom-scrollbar">
-                    {/* Video Player Placeholder */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="aspect-video w-full rounded-3xl bg-black shadow-2xl overflow-hidden relative group border border-white/10"
-                    >
-                        {/* Simulation of a live stream */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-surface-300 to-black flex items-center justify-center">
-                            <img
-                                src="https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=1280"
-                                className="w-full h-full object-cover opacity-60"
-                                alt="Stream preview"
-                            />
-                            <div className="absolute top-6 left-6 flex items-center gap-3">
-                                <div className="bg-red-600 text-white px-3 py-1 rounded-md text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                                    Live
+                    {/* Gold Board Grid Layout */}
+                    <GoldBoardGrid hostId="host-123">
+                        <HostTile pinned>
+                            {/* Video Player Placeholder */}
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="aspect-video w-full bg-black relative group"
+                            >
+                                {/* Simulation of a live stream */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-surface-300 to-black flex items-center justify-center">
+                                    <img
+                                        src="https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=1280"
+                                        className="w-full h-full object-cover opacity-60"
+                                        alt="Stream preview"
+                                    />
+                                    <div className="absolute top-6 left-6 flex items-center gap-3">
+                                        <div className="bg-red-600 text-white px-3 py-1 rounded-md text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                            Live
+                                        </div>
+                                        <div className="glass px-3 py-1 rounded-md text-xs font-bold text-white flex items-center gap-2">
+                                            <Users size={14} />
+                                            {viewerCount.toLocaleString()}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="glass px-3 py-1 rounded-md text-xs font-bold text-white flex items-center gap-2">
-                                    <Users size={14} />
-                                    {viewerCount.toLocaleString()}
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Player Controls Overlay (Fake) */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex items-end">
-                            <div className="w-full flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-3 h-3 rounded-full bg-accent-gold" />
-                                    <span className="text-sm font-medium">1080p60 • Surround Audio</span>
+                                {/* Player Controls Overlay (Fake) */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex items-end">
+                                    <div className="w-full flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-3 h-3 rounded-full bg-accent-gold" />
+                                            <span className="text-sm font-medium">1080p60 • Surround Audio</span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </motion.div>
+                            </motion.div>
+                        </HostTile>
+
+                        {/* Guest Tiles Placeholder */}
+                        {/* More tiles will be rendered as children to flow in the grid */}
+                    </GoldBoardGrid>
 
                     {/* Stream Info */}
                     <div className="mt-8 flex flex-col md:flex-row items-start justify-between gap-6">
@@ -98,12 +109,36 @@ export default function WatchPage() {
                         </div>
                     </div>
 
-                    <div className="mt-8 p-6 glass rounded-[32px] border border-white/10">
-                        <h3 className="font-bold mb-2">About the Stream</h3>
-                        <p className="text-gray-400 leading-relaxed">
-                            Welcome to the world's first fully AI-orchestrated livestream. Tonight we're discussing the cross-section
-                            of neural networks and real-time streaming technology. Don't forget to interact with the AI Director in chat!
-                        </p>
+                    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="p-6 glass rounded-[32px] border border-white/10">
+                            <h3 className="font-bold mb-2">About the Stream</h3>
+                            <p className="text-gray-400 leading-relaxed text-sm">
+                                Welcome to the world's first fully AI-orchestrated livestream. Tonight we're discussing the cross-section
+                                of neural networks and real-time streaming technology. Don't forget to interact with the AI Director in chat!
+                            </p>
+                        </div>
+                        <div className="p-6 glass rounded-[32px] border border-accent-gold/20 bg-gradient-to-br from-surface-400 to-black/40">
+                            <h3 className="font-bold mb-4 flex items-center gap-2 text-accent-gold">
+                                <DollarSign size={18} /> Support the Creator (100% direct)
+                            </h3>
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                                <a href="https://paypal.me/demo" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#00457C] text-white hover:bg-[#003B6A] transition-colors text-sm font-medium shadow-lg">
+                                    PayPal <ExternalLink size={14} />
+                                </a>
+                                <a href="https://cash.app/$demo" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#00D632] text-black hover:bg-[#00C02D] transition-colors text-sm font-medium shadow-lg">
+                                    Cash App <ExternalLink size={14} />
+                                </a>
+                                <a href="https://venmo.com/demo" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#008CFF] text-white hover:bg-[#007AE6] transition-colors text-sm font-medium shadow-lg">
+                                    Venmo <ExternalLink size={14} />
+                                </a>
+                                <button onClick={() => alert('Zelle info: demo-email@zelle.com')} className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#7122C1] text-white hover:bg-[#5D1B9F] transition-colors text-sm font-medium shadow-lg">
+                                    Zelle <Wallet size={14} />
+                                </button>
+                                <button onClick={() => alert('Chime Sign: $demo-chime')} className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#20B048] text-white hover:bg-[#1A963B] transition-colors text-sm font-medium shadow-lg">
+                                    Chime <Wallet size={14} />
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

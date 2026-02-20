@@ -44,6 +44,7 @@ $RemoteCommand = @"
     echo "✅ Remote setup complete!"
 "@
 
+$RemoteCommand = $RemoteCommand -replace "`r`n", "`n"
 ssh "${HostingerUser}@${HostingerIP}" $RemoteCommand
 
 # Clean up local archive

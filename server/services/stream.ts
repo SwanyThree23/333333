@@ -162,8 +162,14 @@ export class StreamService {
         for (const platform of stream.platforms) {
             try {
                 platform.status = 'connecting';
-                // In production, this would actually connect to RTMP
-                await this.simulateConnection(platform);
+                // Hand-off the orchestration payload to the background workers (ffmpeg via Mediasoup SFU)
+                console.log(`[StreamService] Enqueuing RTMP fan-out job for ${platform.name}...`);
+                await rtmpQueue.add('start-rtmp', {
+                    streamId,
+                    destination: platform.name,
+                    streamKeyEncrypted: platform.streamKey,
+                    rtmpUrl: platform.rtmpUrl
+                });
                 platform.status = 'streaming';
             } catch (error) {
                 platform.status = 'error';

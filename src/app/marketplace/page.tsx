@@ -79,8 +79,8 @@ export default function MarketplacePage() {
                                             </div>
                                             <span className="text-xs text-gray-400 font-medium">@creator{i}</span>
                                         </div>
-                                        <button className="text-accent-gold hover:text-white transition-colors">
-                                            <ExternalLink size={16} />
+                                        <button title="View NFT" className="text-accent-gold hover:text-white transition-colors">
+                                            <ExternalLink size={16} aria-label="View NFT Details" />
                                         </button>
                                     </div>
                                 </div>

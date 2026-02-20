@@ -16,6 +16,9 @@ if (Test-Path $ArchiveName) { Remove-Item $ArchiveName -Force }
 # Exclude node_modules, .git, and .next to save bandwidth and time
 Compress-Archive -Path "src", "public", "prisma", "server", "package.json", "package-lock.json", "tsconfig.json", "tailwind.config.ts", "postcss.config.js", "next.config.js", "docker-compose.yml", "docker-compose.prod.yml", ".env" -DestinationPath $ArchiveName -Force
 
+Write-Host "📂 Creating remote directory if it doesn't exist..." -ForegroundColor Yellow
+ssh "${HostingerUser}@${HostingerIP}" "mkdir -p ${RemoteDir}"
+
 # 2. Upload to Hostinger via SCP
 Write-Host "☁️ Uploading $ArchiveName to ${HostingerUser}@${HostingerIP}:${RemoteDir}..." -ForegroundColor Yellow
 scp $ArchiveName "${HostingerUser}@${HostingerIP}:${RemoteDir}/"

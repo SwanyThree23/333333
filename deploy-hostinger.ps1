@@ -33,9 +33,9 @@ $RemoteCommand = @"
     # Check if deploying via Docker Compose or native PM2
     if [ -f "docker-compose.yml" ]; then
         echo "🐳 Detected docker-compose.yml, spinning up containers..."
-        docker-compose down
-        docker-compose build
-        docker-compose up -d
+        docker compose down
+        docker compose build
+        docker compose up -d
     else
         echo "📦 Running native npm install..."
         npm ci

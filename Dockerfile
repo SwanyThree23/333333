@@ -7,7 +7,7 @@ RUN npm ci
 # Build stage
 FROM base AS build
 COPY . .
-RUN npm run prisma generate
+RUN npx prisma generate
 RUN npm run build
 
 # Production stage

@@ -1,23 +1,23 @@
 # Base stage
 FROM node:20-slim AS base
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
-COPY . /app
 WORKDIR /app
+COPY package*.json ./
+RUN npm ci
 
 # Build stage
 FROM base AS build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-RUN pnpm prisma generate
-RUN pnpm run build
+COPY . .
+RUN npm run prisma generate
+RUN npm run build
 
 # Production stage
-FROM base AS production
-COPY --from=build /app/node_modules /app/node_modules
-COPY --from=build /app/.next /app/.next
-COPY --from=build /app/prisma /app/prisma
-COPY --from=build /app/server /app/server
+FROM node:20-slim AS production
+WORKDIR /app
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/server ./server
+COPY --from=build /app/package.json ./package.json
 
 EXPOSE 3001
-CMD ["node", "server/index.ts"]
+CMD ["npm", "run", "server"]

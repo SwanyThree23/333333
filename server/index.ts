@@ -17,6 +17,12 @@ import { getDatabase } from './services/database';
 import { getAuditService } from './services/enterprise/audit';
 import { getAIDirectorService } from './services/ai-director';
 import { getNotificationService } from './services/enterprise/notification';
+import { getGeolocationPrivacyService } from './services/compliance/GeolocationPrivacy';
+import { getWatchPartyValidatorService } from './services/compliance/WatchPartyValidator';
+import { getCreatorVerificationService } from './services/compliance/CreatorVerification';
+import { getContentSafetyService } from './services/compliance/ContentSafety';
+import { getAIContentWatermarkService } from './services/compliance/AIContentWatermark';
+import { getVoiceConsentService } from './services/compliance/VoiceConsentService';
 
 // Import modules
 import { swaggerSpec } from './swagger';
@@ -111,6 +117,123 @@ app.post('/api/test/director/event', async (req: Request, res: Response) => {
         const { type, data, streamId } = req.body;
         await aiDirector.handleEvent({ type, data, streamId });
         res.json({ success: true, message: `Event ${type} processed by AI Director` });
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+// --- Compliance API ---
+app.post('/api/compliance/fuzz-location', async (req: Request, res: Response) => {
+    try {
+        const { lat, lon, precision } = req.body;
+        const geoPrivacy = getGeolocationPrivacyService();
+        const fuzzed = geoPrivacy.fuzzCoordinates(lat, lon, precision);
+        res.json({
+            original: { lat, lon },
+            fuzzed,
+            precision: precision || 'region',
+            note: 'Exact location fuzzed to preserve privacy.'
+        });
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+app.post('/api/compliance/validate-watch-party', (req: Request, res: Response) => {
+    try {
+        const { url } = req.body;
+        const validator = getWatchPartyValidatorService();
+        const result = validator.validateSource(url);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+app.get('/api/compliance/creator-status/:userId', async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const verification = getCreatorVerificationService();
+        const status = await verification.checkStatus(userId);
+        res.json(status);
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+app.post('/api/compliance/verify-creator', async (req: Request, res: Response) => {
+    try {
+        const { userId, verified } = req.body;
+        const verification = getCreatorVerificationService();
+        await verification.setVerified(userId, verified);
+        res.json({ success: true, userId, verified });
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+app.post('/api/compliance/check-hash', (req: Request, res: Response) => {
+    try {
+        const { hash } = req.body;
+        const safety = getContentSafetyService();
+        const result = safety.checkHash(hash);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+app.post('/api/compliance/analyze-snapshot', async (req: Request, res: Response) => {
+    try {
+        const { imageUrl } = req.body;
+        const safety = getContentSafetyService();
+        const report = await safety.analyzeSnapshot(imageUrl);
+        res.json(report);
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+app.post('/api/compliance/sign-stream', (req: Request, res: Response) => {
+    try {
+        const { streamId } = req.body;
+        const timestamp = new Date();
+        const watermark = getAIContentWatermarkService();
+        const signature = watermark.generateSignature(streamId, timestamp);
+        res.json({ streamId, timestamp: timestamp.getTime(), signature });
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+app.post('/api/compliance/verify-stream', (req: Request, res: Response) => {
+    try {
+        const { streamId, timestamp, signature } = req.body;
+        const watermark = getAIContentWatermarkService();
+        const isValid = watermark.verifyContent(streamId, timestamp, signature);
+        res.json({ isValid });
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+app.post('/api/compliance/voice-consent-start', (req: Request, res: Response) => {
+    try {
+        const { userId } = req.body;
+        const consent = getVoiceConsentService();
+        const session = consent.startConsent(userId);
+        res.json(session);
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+app.post('/api/compliance/voice-consent-verify', (req: Request, res: Response) => {
+    try {
+        const { userId, transcript } = req.body;
+        const consent = getVoiceConsentService();
+        const result = consent.verifyConsent(userId, transcript);
+        res.json(result);
     } catch (err) {
         res.status(500).json({ error: (err as Error).message });
     }
